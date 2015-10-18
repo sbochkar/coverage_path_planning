@@ -3,6 +3,8 @@
 
 import math
 import numpy as np
+import time
+import datetime
 
 try:
 	from shapely.geometry import LineString
@@ -30,18 +32,29 @@ def ilp_finite_dir_line_sampling(cvx_set, connectivity, shared_edges, dir_set, s
 	# Separation distance between lines
 	radius = specs["radius"]
 
+	# Line storage
+	line_storage = [[[] for i in range(num_dirs)] for i in range(num_polys)]
+
 	# Do first pass to calculate num of incident lines to the shared edge
+	#	3D structure
+	#			dir0 dir1 ...
+	#		   _________________
+	#	poly0 |	y0_0 y0_1 ...
+	#	poly1 | y1_0 y1_1 ...
+	#	...   | ...
+	#
+	#			y0_0 = [(neighbor of 0, cost)]
 	init_cost_structure = [[[] for i in range(num_dirs)] for i in range(num_polys)]
 
 	for i in range(len(cvx_set)):
 
-		print("Polygon: %d"%i)
-
+		#print("Polygon: %d"%i)
 		for j in range(len(dir_set)):
+			#print("Dir: %d -> "%j),
 
-			print("Dir: %d -> "%j),
 			# Generate lines in cvx_set[i] with direction [j]
 			lines, raw_lines = sample_with_lines(cvx_set[i], dir_set[j], radius)
+			line_storage[i][j].append(lines)
 
 			# Count number of lines incident to shared edge
 			# 	1: Find all the neighbors of cvx_set[i]
@@ -55,13 +68,13 @@ def ilp_finite_dir_line_sampling(cvx_set, connectivity, shared_edges, dir_set, s
 				#	3: Find num of incident lines to the shared edge
 				num_incs = get_incident_lines_num(shared_edge, raw_lines)
 				#print("Num of inci: %d"%num)
-				print("(%d, %d) "%(neigh, num_incs)),
+				#print("(%d, %d) "%(neigh, num_incs)),
 
 
 				#	4: Store the cost for each edge
 				init_cost_structure[i][j].append((neigh, num_incs))
-			print("")
-		print("")
+			#print("")
+		#print("")
 
 	#pretty_print_cost_structure(init_cost_structure)
 	# Generate a nicer matrix of edge costs
@@ -86,7 +99,7 @@ def ilp_finite_dir_line_sampling(cvx_set, connectivity, shared_edges, dir_set, s
 						if sec_num_1 == neighbs_2[l][0]:
 							cost_matrix[i][j] = abs(neighbs_1[k][1] - neighbs_2[l][1])
 
-	print cost_matrix
+	#print cost_matrix
 
 
 	# Start to formulate the ILP problem
@@ -142,9 +155,19 @@ def ilp_finite_dir_line_sampling(cvx_set, connectivity, shared_edges, dir_set, s
 	solver = model.load("SCIP")
 	solver.solve()
 
-	print model
+	# Return line samples that have been found
+	final_line_storage = [[] for i in range(num_polys)]
 
-	return None
+	for i in range(num_polys):
+		for j in range(num_dirs):
+			if dir_var[i][j].get_value():
+				#for k in len(line_storage[i][j]:
+				final_line_storage[i].extend(line_storage[i][j][0])
+				#print final_line_storage[i]
+
+	#print final_line_storage
+
+	return final_line_storage
 
 
 def get_incident_lines_num(edge, lines):
@@ -362,3 +385,12 @@ def getOffsetFromEdge(line_seg, r):
 	term_2 = r*math.sqrt(term_1+1)
 
 	return term_2
+
+
+def current_time():
+	"""
+	This helper function return current time in human readnable format
+	:return time: Time string in human readable format
+	"""
+	ts = time.time()
+	return datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d %H:%M:%S')
