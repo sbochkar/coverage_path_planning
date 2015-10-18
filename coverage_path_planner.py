@@ -81,6 +81,6 @@ if __name__ == "__main__":
 
 	map_poly = [(0, 0), (5, 0), (2, 4)]
 
-	specs = {"radius": 1}
+	specs = {"radius": 0.25}
 
 	coverage_path_planner(map_poly, Methods.local_line_sampling_2dir, specs);

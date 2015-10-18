@@ -39,7 +39,7 @@ def ilp_finite_dir_line_sampling(cvx_set, connectivity, shared_edges, dir_set, s
 
 		for j in range(len(dir_set)):
 
-			print("Dir: %d -> "%j, end="")
+			print("Dir: %d -> "%j),
 			# Generate lines in cvx_set[i] with direction [j]
 			lines, raw_lines = sample_with_lines(cvx_set[i], dir_set[j], radius)
 
@@ -55,7 +55,8 @@ def ilp_finite_dir_line_sampling(cvx_set, connectivity, shared_edges, dir_set, s
 				#	3: Find num of incident lines to the shared edge
 				num_incs = get_incident_lines_num(shared_edge, raw_lines)
 				#print("Num of inci: %d"%num)
-				print("(%d, %d) "%(neigh, num_incs), end="")
+				print("(%d, %d) "%(neigh, num_incs)),
+
 
 				#	4: Store the cost for each edge
 				init_cost_structure[i][j].append((neigh, num_incs))
@@ -63,6 +64,85 @@ def ilp_finite_dir_line_sampling(cvx_set, connectivity, shared_edges, dir_set, s
 		print("")
 
 	#pretty_print_cost_structure(init_cost_structure)
+	# Generate a nicer matrix of edge costs
+	MAX_COST = 10000
+	cost_matrix = [[MAX_COST for i in range(num_dirs*num_polys)] for i in range(num_dirs*num_polys)]
+	
+	for i in range(num_dirs*num_polys):
+		for j in range(num_dirs*num_polys):
+
+			dir_num_1 = i%num_dirs
+			sec_num_1 = i/num_dirs
+
+			dir_num_2 = j%num_dirs
+			sec_num_2 = j/num_dirs
+
+			neighbs_1 = init_cost_structure[sec_num_1][dir_num_1]
+			neighbs_2 = init_cost_structure[sec_num_2][dir_num_2]
+
+			for k in range(len(neighbs_1)):
+				if sec_num_2 == neighbs_1[k][0]:
+					for l in range(len(neighbs_2)):
+						if sec_num_1 == neighbs_2[l][0]:
+							cost_matrix[i][j] = abs(neighbs_1[k][1] - neighbs_2[l][1])
+
+	print cost_matrix
+
+
+	# Start to formulate the ILP problem
+	import Numberjack as nj
+
+	num_edge = num_dirs * num_polys
+
+	# dir_var:  |x0.0, x0.1 ... x0.d
+	#		    |x1.0, x1.1 ... x1.d
+	#			|x2.0, x2.1 ... x2.d
+	#			|.
+	dir_var = nj.Matrix(num_polys, num_dirs)
+
+	# edge_var: 	 x0.0, x0.1 ... x0.d, x1.0 ... xn.d
+	#				 ____________________________
+	#			x0.1 | ...
+	#			.    |
+	#			x0.d | ...
+	#			.    |
+	#			xn.d | ...
+	edge_var = nj.Matrix(num_edge, num_edge)
+
+
+	# Constraints
+	model = nj.Model()
+
+	# Only one direction per sector
+	model.add([ nj.Sum(row) == 1 for row in dir_var.row])
+
+	# Edge selection constraint
+	for i in range(num_edge):
+		for j in range(num_edge):
+
+			dir_num_1 = i%num_dirs
+			sec_num_1 = i/num_dirs
+
+			dir_num_2 = j%num_dirs
+			sec_num_2 = j/num_dirs
+
+			model.add(
+				edge_var[i][j] == dir_var[sec_num_1][dir_num_1] & dir_var[sec_num_2][dir_num_2]
+			)
+
+	# Objective function
+	model.add(
+		nj.Minimize(
+			nj.Sum(
+				nj.Sum(decision_var, cost) for (cost, decision_var) in zip(cost_matrix, edge_var)
+			)
+		)
+	)
+
+	solver = model.load("SCIP")
+	solver.solve()
+
+	print model
 
 	return None
 
@@ -70,6 +150,7 @@ def ilp_finite_dir_line_sampling(cvx_set, connectivity, shared_edges, dir_set, s
 def get_incident_lines_num(edge, lines):
 	"""
 	Calculates the number of lines that intersect the edge
+	TODO: Might be some float rounding issues when counting lines
 	:param edge: List of 2 tuples
 	:param lines: List of lines
 	:return num_inciden: Number of lines incident to the edge
@@ -87,7 +168,6 @@ def get_incident_lines_num(edge, lines):
 		# Assume it can be eithe empty or point intersection
 		if not intersection.is_empty:
 			num_intersections += 1
-
 
 	#print("Edge: %s"%edge)
 	#print("Lines: %s"%lines)
@@ -107,7 +187,7 @@ def pretty_print_cost_structure(cost):
 		print("Poly: %d"%i)
 		
 		for j in range(len(cost[0])):
-			print("Dir: %d -> "%j, end="")
+			print("Dir: %d -> "%j),
 
 
 			print("cost: %s"%cost[i][j])
@@ -151,8 +231,7 @@ def sample_with_lines(shape, theta, r):
 	
 
 	# Create a copy of (X, Y) list and rotate it
-	rotated_shape = list(shape)
-	rotate(rotated_shape, theta)
+	rotated_shape = rotate(shape, theta)
 	num_edges = len(rotated_shape)
 
 
