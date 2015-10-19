@@ -68,7 +68,7 @@ def coverage_path_planner(map_poly, method, specs):
 		print("[%18s] Finished greedy decomposition."%tk.current_time())
 
 		print("[%18s] Startint to sample the free space with lines."%tk.current_time())
-		lines = lsmpl.ilp_finite_dir_line_sampling(cvx_set, connectivity, shared_edges, [0, math.pi/4, math.pi/2], specs)
+		lines = lsmpl.ilp_finite_dir_line_sampling(cvx_set, connectivity, shared_edges, [0, math.pi/4, math.pi/3, math.pi/2], specs)
 		print("[%18s] Finished samling."%tk.current_time())
 
 		ax = splot.init_axis()
@@ -96,6 +96,6 @@ if __name__ == "__main__":
 
 	map_poly = [(0, 0), (5, 0), (2, 4)]
 
-	specs = {"radius": 1}
+	specs = {"radius": 0.5}
 
 	coverage_path_planner(map_poly, Methods.local_line_sampling_2dir, specs)

@@ -136,12 +136,20 @@ def ilp_finite_dir_line_sampling(cvx_set, connectivity, shared_edges, dir_set, s
 				edge_var[i][j] == dir_var[sec_num_1][dir_num_1] & dir_var[sec_num_2][dir_num_2]
 			)
 
+
+
+
 	# Objective function
 	model.add(
 		nj.Minimize(
-			nj.Sum(
-				nj.Sum(decision_var, cost) for (cost, decision_var) in zip(miss_cost_matrix, edge_var)
-			)
+			nj.Sum( [
+				nj.Sum(
+					nj.Sum(decision_var, cost) for (cost, decision_var) in zip(miss_cost_matrix, edge_var)
+				),
+				nj.Sum(
+					nj.Sum(dir_dec_var, num) for (num, dir_dec_var) in zip(lines_cost_matrix, dir_var)
+				)
+			])
 		)
 	)
 
@@ -154,12 +162,9 @@ def ilp_finite_dir_line_sampling(cvx_set, connectivity, shared_edges, dir_set, s
 	for i in range(num_polys):
 		for j in range(num_dirs):
 			if dir_var[i][j].get_value():
-				#for k in len(line_storage[i][j]:
 				final_line_storage[i].extend(line_storage[i][j])
-				#print final_line_storage[i]
 
 	#print final_line_storage
-	print lines_cost_matrix
 	return final_line_storage
 
 
