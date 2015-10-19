@@ -8,7 +8,11 @@ import datetime
 
 try:
 	from shapely.geometry import LineString
-except ImportError: print("Importing Shapely module failed!")
+	import Numberjack as nj
+except ImportError: print("Importing modules failed!")
+
+
+MAX_COST = 10000
 
 
 def ilp_finite_dir_line_sampling(cvx_set, connectivity, shared_edges, dir_set, specs):
@@ -32,79 +36,68 @@ def ilp_finite_dir_line_sampling(cvx_set, connectivity, shared_edges, dir_set, s
 	# Separation distance between lines
 	radius = specs["radius"]
 
-	# Line storage
+	# Line storage. nxn array of list of lines
+	# These lines will be used for visualization on convex sets
 	line_storage = [[[] for i in range(num_dirs)] for i in range(num_polys)]
+	lines_cost_matrix = [[MAX_COST for i in range(num_dirs)]
+								  for i in range(num_polys)]
+
+	miss_cost_struct = [[[MAX_COST for i in range(num_dirs)]
+								 	for i in range(num_polys)]
+								 	for i in range(num_polys)]
 
 	# Do first pass to calculate num of incident lines to the shared edge
-	#	3D structure
-	#			dir0 dir1 ...
+	#	nxnxn structure
+	#			neigh_0 neigh_1 ....
 	#		   _________________
 	#	poly0 |	y0_0 y0_1 ...
 	#	poly1 | y1_0 y1_1 ...
 	#	...   | ...
 	#
-	#			y0_0 = [(neighbor of 0, cost)]
-	init_cost_structure = [[[] for i in range(num_dirs)] for i in range(num_polys)]
+	#			y0_0 = [cost at dir_0, cost at dir_1, ... cot at dir_n]
+	for poly in range(len(cvx_set)):
+		for neigh in range(len(cvx_set)):
 
-	for i in range(len(cvx_set)):
+			# If poly has neigh adjacent then
+			if connectivity[poly][neigh]:
+		
+				for dirr in range(num_dirs):		
 
-		#print("Polygon: %d"%i)
-		for j in range(len(dir_set)):
-			#print("Dir: %d -> "%j),
+					# Generate lines for poly in each direction
+					lines, raw_lines = sample_with_lines(cvx_set[poly], dir_set[dirr], radius)
+					line_storage[poly][dirr].extend(lines)
+					lines_cost_matrix[poly][dirr] = len(lines)
 
-			# Generate lines in cvx_set[i] with direction [j]
-			lines, raw_lines = sample_with_lines(cvx_set[i], dir_set[j], radius)
-			line_storage[i][j].append(lines)
+					shared_edge = shared_edges[poly][neigh]
 
-			# Count number of lines incident to shared edge
-			# 	1: Find all the neighbors of cvx_set[i]
-			neighbs = find_neighbors(i, connectivity)
+					# Count the number of incident lines to shared edge
+					num_incs = get_incident_lines_num(shared_edge, raw_lines)				
+					
+					miss_cost_struct[poly][neigh][dirr] = num_incs
+			else:
+				miss_cost_struct[poly][neigh] = None
 
-			# 	2: For each neighbor, find shared edge
-			for neigh in neighbs:
-				shared_edge = shared_edges[i][neigh]
-				#print("Sh. Edge: %s"%shared_edge)
-
-				#	3: Find num of incident lines to the shared edge
-				num_incs = get_incident_lines_num(shared_edge, raw_lines)
-				#print("Num of inci: %d"%num)
-				#print("(%d, %d) "%(neigh, num_incs)),
-
-
-				#	4: Store the cost for each edge
-				init_cost_structure[i][j].append((neigh, num_incs))
-			#print("")
-		#print("")
-
-	#pretty_print_cost_structure(init_cost_structure)
-	# Generate a nicer matrix of edge costs
-	MAX_COST = 10000
-	cost_matrix = [[MAX_COST for i in range(num_dirs*num_polys)] for i in range(num_dirs*num_polys)]
+	# Generate a matrix for mismatches on edges on all choises of direction 
+	miss_cost_matrix = [[MAX_COST for i in range(num_dirs*num_polys)]
+								  for i in range(num_dirs*num_polys)]
 	
-	for i in range(num_dirs*num_polys):
-		for j in range(num_dirs*num_polys):
+	for x_i in range(num_dirs*num_polys):
+		for x_j in range(num_dirs*num_polys):
 
-			dir_num_1 = i%num_dirs
-			sec_num_1 = i/num_dirs
+			dir_num_1 = x_i%num_dirs
+			sec_num_1 = x_i/num_dirs
 
-			dir_num_2 = j%num_dirs
-			sec_num_2 = j/num_dirs
+			dir_num_2 = x_j%num_dirs
+			sec_num_2 = x_j/num_dirs
 
-			neighbs_1 = init_cost_structure[sec_num_1][dir_num_1]
-			neighbs_2 = init_cost_structure[sec_num_2][dir_num_2]
+			if miss_cost_struct[sec_num_1][sec_num_2] is not None:
+				temp_list = miss_cost_struct[sec_num_1][sec_num_2]
 
-			for k in range(len(neighbs_1)):
-				if sec_num_2 == neighbs_1[k][0]:
-					for l in range(len(neighbs_2)):
-						if sec_num_1 == neighbs_2[l][0]:
-							cost_matrix[i][j] = abs(neighbs_1[k][1] - neighbs_2[l][1])
+				miss_cost_matrix[x_i][x_j] = abs(temp_list[dir_num_1]-temp_list[dir_num_2])
 
-	#print cost_matrix
 
 
 	# Start to formulate the ILP problem
-	import Numberjack as nj
-
 	num_edge = num_dirs * num_polys
 
 	# dir_var:  |x0.0, x0.1 ... x0.d
@@ -147,7 +140,7 @@ def ilp_finite_dir_line_sampling(cvx_set, connectivity, shared_edges, dir_set, s
 	model.add(
 		nj.Minimize(
 			nj.Sum(
-				nj.Sum(decision_var, cost) for (cost, decision_var) in zip(cost_matrix, edge_var)
+				nj.Sum(decision_var, cost) for (cost, decision_var) in zip(miss_cost_matrix, edge_var)
 			)
 		)
 	)
@@ -162,11 +155,11 @@ def ilp_finite_dir_line_sampling(cvx_set, connectivity, shared_edges, dir_set, s
 		for j in range(num_dirs):
 			if dir_var[i][j].get_value():
 				#for k in len(line_storage[i][j]:
-				final_line_storage[i].extend(line_storage[i][j][0])
+				final_line_storage[i].extend(line_storage[i][j])
 				#print final_line_storage[i]
 
 	#print final_line_storage
-
+	print lines_cost_matrix
 	return final_line_storage
 
 
@@ -201,7 +194,7 @@ def get_incident_lines_num(edge, lines):
 
 def pretty_print_cost_structure(cost):
 	"""
-	Pretty print for cost init_cost_structure
+	Pretty print for cost miss_cost_struct
 	:param cost: Cost array
 	:return: None
 	"""

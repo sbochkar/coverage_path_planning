@@ -81,7 +81,6 @@ def plot_samples(ax, lines):
 	"""
 
 	for line_set in lines:
-		print len(line_set) 
 		for line in line_set:
 			x, y = zip(*line)
 			ax.plot(x, y, color='orange', alpha=0.9, linewidth=3, zorder=3)	
