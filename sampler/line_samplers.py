@@ -42,7 +42,7 @@ def ilp_finite_dir_line_sampling(cvx_set, connectivity, shared_edges, dir_set, s
 	lines_cost_matrix = [[MAX_COST for i in range(num_dirs)]
 								  for i in range(num_polys)]
 
-	miss_cost_struct = [[[MAX_COST for i in range(num_dirs)]
+	incid_line_strct = [[[MAX_COST for i in range(num_dirs)]
 								 	for i in range(num_polys)]
 								 	for i in range(num_polys)]
 
@@ -73,12 +73,13 @@ def ilp_finite_dir_line_sampling(cvx_set, connectivity, shared_edges, dir_set, s
 					# Count the number of incident lines to shared edge
 					num_incs = get_incident_lines_num(shared_edge, raw_lines)				
 					
-					miss_cost_struct[poly][neigh][dirr] = num_incs
+					incid_line_strct[poly][neigh][dirr] = num_incs
 			else:
-				miss_cost_struct[poly][neigh] = None
+				incid_line_strct[poly][neigh] = None
 
+	# Mismatch cost metric
 	# Generate a matrix for mismatches on edges on all choises of direction 
-	miss_cost_matrix = [[MAX_COST for i in range(num_dirs*num_polys)]
+	mis_cost_matrix = [[MAX_COST for i in range(num_dirs*num_polys)]
 								  for i in range(num_dirs*num_polys)]
 	
 	for x_i in range(num_dirs*num_polys):
@@ -90,10 +91,29 @@ def ilp_finite_dir_line_sampling(cvx_set, connectivity, shared_edges, dir_set, s
 			dir_num_2 = x_j%num_dirs
 			sec_num_2 = x_j/num_dirs
 
-			if miss_cost_struct[sec_num_1][sec_num_2] is not None:
-				temp_list = miss_cost_struct[sec_num_1][sec_num_2]
+			if incid_line_strct[sec_num_1][sec_num_2] is not None:
+				temp_list = incid_line_strct[sec_num_1][sec_num_2]
 
-				miss_cost_matrix[x_i][x_j] = abs(temp_list[dir_num_1]-temp_list[dir_num_2])
+				mis_cost_matrix[x_i][x_j] = abs(temp_list[dir_num_1]-temp_list[dir_num_2])
+
+
+	# Maximize incident edges cost metric
+	sum_cost_matrix = [[MAX_COST for i in range(num_dirs*num_polys)]
+								  for i in range(num_dirs*num_polys)]
+	
+	for x_i in range(num_dirs*num_polys):
+		for x_j in range(num_dirs*num_polys):
+
+			dir_num_1 = x_i%num_dirs
+			sec_num_1 = x_i/num_dirs
+
+			dir_num_2 = x_j%num_dirs
+			sec_num_2 = x_j/num_dirs
+
+			if incid_line_strct[sec_num_1][sec_num_2] is not None:
+				temp_list = incid_line_strct[sec_num_1][sec_num_2]
+
+				sum_cost_matrix[x_i][x_j] = -abs(temp_list[dir_num_1]+temp_list[dir_num_2])
 
 
 
@@ -144,12 +164,17 @@ def ilp_finite_dir_line_sampling(cvx_set, connectivity, shared_edges, dir_set, s
 		nj.Minimize(
 			nj.Sum( [
 				nj.Sum(
-					nj.Sum(decision_var, cost) for (cost, decision_var) in zip(miss_cost_matrix, edge_var)
+					nj.Sum(decision_var, cost) for (cost, decision_var) in zip(mis_cost_matrix, edge_var)
 				),
+
+#				nj.Sum(
+#					nj.Sum(decision_var, cost) for (cost, decision_var) in zip(sum_cost_matrix, edge_var)
+#				),
 				nj.Sum(
 					nj.Sum(dir_dec_var, num) for (num, dir_dec_var) in zip(lines_cost_matrix, dir_var)
 				)
-			])
+			],
+			[1, 1])
 		)
 	)
 
@@ -199,7 +224,7 @@ def get_incident_lines_num(edge, lines):
 
 def pretty_print_cost_structure(cost):
 	"""
-	Pretty print for cost miss_cost_struct
+	Pretty print for cost incid_line_strct
 	:param cost: Cost array
 	:return: None
 	"""

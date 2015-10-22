@@ -9,7 +9,7 @@ def greedy_decompose(map_poly):
 	:return shared_edges: Matrix showing shared edges between regions
 	"""
 
-	NUM = 1
+	NUM = 4
 	cvx_sets = []
 
 	if NUM == 1:
@@ -113,6 +113,88 @@ def greedy_decompose(map_poly):
 		shared_edges[2][0] = [(5, 15), (5, 10)]
 		shared_edges[2][1] = None
 		shared_edges[2][2] = None
+
+	elif NUM == 4:
+		cvx_sets.append([(0, 0), (1, 0), (1, 3), (0, 3)])
+		cvx_sets.append([(1, 0), (2, 0), (2, 2), (1, 2)])
+		cvx_sets.append([(2, 0), (3, 0), (3, 1), (2, 1)])
+		cvx_sets.append([(3, 0), (5, 0), (5, 2), (3, 2)])
+		cvx_sets.append([(4, 2), (5, 2), (5, 3), (4, 3)])
+		cvx_sets.append([(3, 3), (5, 3), (5, 4), (3, 4)])
+		cvx_sets.append([(2, 4), (5, 4), (5, 5), (2, 5)])
+		cvx_sets.append([(1, 4), (2, 4), (2, 5), (0, 5)])
+		cvx_sets.append([(1, 3), (2, 3), (2, 4), (1, 4)])
+		cvx_sets.append([(0, 3), (1, 3), (1, 4), (0, 5)])
+
+
+
+		num_nodes = len(cvx_sets)
+		connect_graph = [[0 for i in range(num_nodes)] for i in range(num_nodes)]
+	
+		connect_graph[0][1] = 1
+		connect_graph[0][9] = 1	
+		connect_graph[1][0] = 1
+		connect_graph[1][2] = 1
+
+		connect_graph[2][1] = 1
+		connect_graph[2][3] = 1
+
+		connect_graph[3][2] = 1
+		connect_graph[3][4] = 1
+
+		connect_graph[4][3] = 1
+		connect_graph[4][5] = 1
+
+		connect_graph[5][4] = 1
+		connect_graph[5][6] = 1
+
+		connect_graph[6][5] = 1
+		connect_graph[6][7] = 1
+
+		connect_graph[7][6] = 1
+		connect_graph[7][8] = 1
+		connect_graph[7][9] = 1
+
+		connect_graph[8][7] = 1
+		connect_graph[8][9] = 1
+
+		connect_graph[9][0] = 1
+		connect_graph[9][7] = 1
+		connect_graph[9][8] = 1
+
+		shared_edges = [[None for i in range(num_nodes)] for i in range(num_nodes)]
+
+		shared_edges[0][1] = [(1, 0),(1, 2)]
+		shared_edges[0][9] = [(1, 3),(0, 3)]	
+
+		shared_edges[1][0] = [(1, 0),(1, 2)]
+		shared_edges[1][2] = [(2, 0),(2, 1)]
+		
+		shared_edges[2][1] = [(2, 0),(2, 1)]
+		shared_edges[2][3] = [(3, 1),(3, 0)]
+
+		shared_edges[3][2] = [(3, 1),(3, 0)]
+		shared_edges[3][4] = [(5, 2),(4, 2)]
+
+		shared_edges[4][3] = [(5, 2),(4, 2)]
+		shared_edges[4][5] = [(4, 3),(5, 3)]
+
+		shared_edges[5][4] = [(4, 3),(5, 3)]
+		shared_edges[5][6] = [(3, 4),(5, 4)]
+
+		shared_edges[6][5] = [(3, 4),(5, 4)]
+		shared_edges[6][7] = [(2, 5),(2, 4)]
+
+		shared_edges[7][6] = [(2, 5),(2, 4)]
+		shared_edges[7][8] = [(1, 4),(2, 4)]
+		shared_edges[7][9] = [(0, 5),(1, 4)]
+
+		shared_edges[8][7] = [(1, 4),(2, 4)]
+		shared_edges[8][9] = [(1, 4),(1, 3)]
+
+		shared_edges[9][0] = [(0, 3),(1, 3)]
+		shared_edges[9][7] = [(0, 5),(1, 4)]
+		shared_edges[9][8] = [(1, 4),(1, 3)]
 
 
 
