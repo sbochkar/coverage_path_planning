@@ -65,8 +65,10 @@ def ilp_finite_dir_line_sampling(cvx_set, connectivity, shared_edges, dir_set, s
 
 					# Generate lines for poly in each direction
 					lines, raw_lines = sample_with_lines(cvx_set[poly], dir_set[dirr], radius)
-					line_storage[poly][dirr].extend(lines)
-					lines_cost_matrix[poly][dirr] = len(lines)
+
+					if not line_storage[poly][dirr]:
+						line_storage[poly][dirr].extend(lines)
+						lines_cost_matrix[poly][dirr] = len(lines)
 
 					shared_edge = shared_edges[poly][neigh]
 

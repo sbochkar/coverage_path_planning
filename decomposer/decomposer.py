@@ -9,7 +9,7 @@ def greedy_decompose(map_poly):
 	:return shared_edges: Matrix showing shared edges between regions
 	"""
 
-	NUM = 4
+	NUM = 1
 	cvx_sets = []
 
 	if NUM == 1:

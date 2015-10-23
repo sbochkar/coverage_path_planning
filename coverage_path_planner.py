@@ -8,7 +8,7 @@ from enum import Enum
 
 
 # Local modules
-subfolders = ["time_keeping", "decomposer", "sampler", "visuals"]
+subfolders = ["time_keeping", "decomposer", "sampler", "visuals", "gtsp"]
 for subfolder in subfolders:
 	cmd_subfolder = os.path.realpath(
 						os.path.abspath(
@@ -30,6 +30,7 @@ import time_keeping as tk
 import decomposer as dec
 import line_samplers as lsmpl
 import static_plotting as splot
+import cost_calc as cc
 
 
 # Define Enum for methods
@@ -71,6 +72,18 @@ def coverage_path_planner(map_poly, method, specs):
 		lines = lsmpl.ilp_finite_dir_line_sampling(cvx_set, connectivity, shared_edges, [0, math.pi/4, math.pi/2], specs)
 		print("[%18s] Finished samling."%tk.current_time())
 
+		print("[%18s] Initializing GTSP cost matrix."%tk.current_time())
+
+		print("[%18s] Computing intrasector transitions costs."%tk.current_time())
+		intra_sector_cost = cc.compute_intrasector_transitions(lines)
+		inter_sector_cost = cc.compute_intersector_transitions(lines, connectivity)
+
+		#print("[%18s] Computing metric closure on the graph."%tk.current_time())
+		print("[%18s] Generating a GTSP cost matrix."%tk.current_time())
+		cost_matrix = cc.init_cost_matrix(lines)
+		cc.gtsp_cost_matrix(cost_matrix, intra_sector_cost, inter_sector_cost)
+
+
 		ax = splot.init_axis()
 
 		# Implementation missing for now
@@ -96,6 +109,6 @@ if __name__ == "__main__":
 
 	map_poly = [(0, 0), (5, 0), (2, 4)]
 
-	specs = {"radius": 0.1}
+	specs = {"radius": 1}
 
 	coverage_path_planner(map_poly, Methods.local_line_sampling_2dir, specs)
