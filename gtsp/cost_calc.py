@@ -114,4 +114,5 @@ def gtsp_cost_matrix(cost_matrix, intra, inter):
 	"""
 
 	num_clusters = len(inter)
+
 	

@@ -78,6 +78,7 @@ def coverage_path_planner(map_poly, method, specs):
 		intra_sector_cost = cc.compute_intrasector_transitions(lines)
 		inter_sector_cost = cc.compute_intersector_transitions(lines, connectivity)
 
+		print inter_sector_cost
 		#print("[%18s] Computing metric closure on the graph."%tk.current_time())
 		print("[%18s] Generating a GTSP cost matrix."%tk.current_time())
 		cost_matrix = cc.init_cost_matrix(lines)
