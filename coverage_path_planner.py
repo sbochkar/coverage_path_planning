@@ -8,7 +8,7 @@ from enum import Enum
 
 
 # Local modules
-subfolders = ["time_keeping", "decomposer", "sampler", "visuals", "gtsp"]
+subfolders = ["time_keeping", "decomposer", "sampler", "visuals", "gtsp", "cost_cal"]
 for subfolder in subfolders:
 	cmd_subfolder = os.path.realpath(
 						os.path.abspath(
@@ -30,7 +30,8 @@ import time_keeping as tk
 import decomposer as dec
 import line_samplers as lsmpl
 import static_plotting as splot
-import cost_calc as cc
+import simple_cost as sc
+import gtsp
 
 
 # Define Enum for methods
@@ -69,7 +70,7 @@ def coverage_path_planner(map_poly, method, specs):
 		print("[%18s] Finished greedy decomposition."%tk.current_time())
 
 		print("[%18s] Startint to sample the free space with lines."%tk.current_time())
-		lines = lsmpl.ilp_finite_dir_line_sampling(cvx_set, connectivity, shared_edges, [0, math.pi/4, math.pi/2], specs)
+		lines = lsmpl.ilp_finite_dir_line_sampling(cvx_set, connectivity, shared_edges, [0, math.pi/4, math.pi/3, math.pi/2], specs)
 		print lines[0][0][0]
 		temp = lines[0][0][0]
 		lines[0][0][0] = lines[0][0][1]
@@ -78,16 +79,16 @@ def coverage_path_planner(map_poly, method, specs):
 		print("[%18s] Finished samling."%tk.current_time())
 
 		print("[%18s] Initializing GTSP cost matrix."%tk.current_time())
-		dict_mapping = cc.init_dict_mapping(lines)
+		dict_mapping = lsmpl.init_dict_mapping(lines)
 
 		print("[%18s] Computing the cost matrix."%tk.current_time())
-		cost_matrix, cluster_list = cc.init_cost_matrix(dict_mapping, lines)
+		cost_matrix, cluster_list = sc.init_cost_matrix(dict_mapping, lines)
 
 		print("[%18s] Launching GTSP instance."%tk.current_time())
-		cc.generate_gtsp_instance("cpp_test", "/home/stan/misc/GLKH-1.0/", cost_matrix, cluster_list)
+		gtsp.generate_gtsp_instance("cpp_test", "/home/sbochkar/misc/GLKH-1.0/", cost_matrix, cluster_list)
 
 		print("[%18s] Reading the results."%tk.current_time())
-		tour = cc.read_tour("cpp_test")
+		tour = gtsp.read_tour("cpp_test")
 		print tour
 
 #		for i in range(len(cost_matrix)):

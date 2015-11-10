@@ -166,7 +166,7 @@ def ilp_finite_dir_line_sampling(cvx_set, connectivity, shared_edges, dir_set, s
 		nj.Minimize(
 			nj.Sum( [
 				nj.Sum(
-					nj.Sum(decision_var, cost) for (cost, decision_var) in zip(mis_cost_matrix, edge_var)
+					nj.Sum(decision_var, cost) for (cost, decision_var) in zip(sum_cost_matrix, edge_var)
 				),
 
 #				nj.Sum(
@@ -410,6 +410,28 @@ def getOffsetFromEdge(line_seg, r):
 	term_2 = r*math.sqrt(term_1+1)
 
 	return term_2
+
+
+def init_dict_mapping(lines):
+	"""
+	:param lines: List of lists of lists
+	:return dict_mapping: A 1:1 mapping from vertex to line direction. This is needed to simplify access to direction.
+	"""
+
+	dict_mapping = {}
+	counter = 0
+
+	# For each convex polygon
+	for poly in range(len(lines)):
+
+		# For each line in convex polygon
+		for line in range(len(lines[poly])):
+
+			for dirc in range(len(lines[poly][line])):
+				dict_mapping.update({counter:(poly, line, dirc)})
+				counter += 1
+
+	return dict_mapping
 
 
 def current_time():
