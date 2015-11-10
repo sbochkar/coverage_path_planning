@@ -86,6 +86,33 @@ def plot_samples(ax, lines):
 			ax.plot(x, y, color='orange', alpha=0.9, linewidth=3, zorder=3)	
 
 
+def plot_tour(ax, tour, lines, dict_map):
+	"""
+	Function will plot the GTSP tour.
+	:param ax:
+	:param tour: tour
+	:param lines:
+	:param dict_map: 
+	"""
+
+	for i in range(len(tour)-1):
+		o_node = tour[i]
+		i_node = tour[i+1]
+
+		o_poly_idx, o_line_idx, o_dirr_idx = dict_map[o_node]
+		print dict_map[o_node]
+		i_poly_idx, i_line_idx, i_dirr_idx = dict_map[i_node]
+
+		o_pt = lines[o_poly_idx][o_line_idx][o_dirr_idx]
+		i_pt = lines[i_poly_idx][i_line_idx][(1+i_dirr_idx)%2]
+
+		dx = i_pt[0] - o_pt[0]
+		dy = i_pt[1] - o_pt[1]
+
+		ax.arrow(o_pt[0], o_pt[1], dx, dy, head_width=0.1, ec='green', length_includes_head=True, zorder=4)
+
+
+
 def display():
 	"""
 	Function display the figure
@@ -93,3 +120,4 @@ def display():
 	"""
 
 	plt.show()
+

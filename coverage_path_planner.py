@@ -73,16 +73,24 @@ def coverage_path_planner(map_poly, method, specs):
 		print("[%18s] Finished samling."%tk.current_time())
 
 		print("[%18s] Initializing GTSP cost matrix."%tk.current_time())
+		dict_mapping = cc.init_dict_mapping(lines)
 
-		print("[%18s] Computing intrasector transitions costs."%tk.current_time())
-		intra_sector_cost = cc.compute_intrasector_transitions(lines)
-		inter_sector_cost = cc.compute_intersector_transitions(lines, connectivity)
+		print("[%18s] Computing the cost matrix."%tk.current_time())
+		cost_matrix, cluster_list = cc.init_cost_matrix(dict_mapping, lines)
 
-		print inter_sector_cost
-		#print("[%18s] Computing metric closure on the graph."%tk.current_time())
-		print("[%18s] Generating a GTSP cost matrix."%tk.current_time())
-		cost_matrix = cc.init_cost_matrix(lines)
-		cc.gtsp_cost_matrix(cost_matrix, intra_sector_cost, inter_sector_cost)
+		print("[%18s] Launching GTSP instance."%tk.current_time())
+		cc.generate_gtsp_instance("cpp_test", "/home/stan/misc/GLKH-1.0/", cost_matrix, cluster_list)
+
+		print("[%18s] Reading the results."%tk.current_time())
+		tour = cc.read_tour("cpp_test")
+		print tour
+
+#		for i in range(len(cost_matrix)):
+#			for j in range(len(cost_matrix)):
+#				print("%3d "%cost_matrix[i][j]),
+#			print 
+
+
 
 
 		ax = splot.init_axis()
@@ -95,6 +103,9 @@ def coverage_path_planner(map_poly, method, specs):
 
 		print("[%18s] Plotting sampling."%tk.current_time())
 		splot.plot_samples(ax, lines)
+
+		print("[%18s] Plotting path."%tk.current_time())
+		splot.plot_tour(ax, tour, lines, dict_mapping)
 
 		splot.display()
 		
@@ -110,6 +121,6 @@ if __name__ == "__main__":
 
 	map_poly = [(0, 0), (5, 0), (2, 4)]
 
-	specs = {"radius": 1}
+	specs = {"radius": 0.5}
 
 	coverage_path_planner(map_poly, Methods.local_line_sampling_2dir, specs)

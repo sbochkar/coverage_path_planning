@@ -1,27 +1,7 @@
 import math
-
+import os
 
 MAX_COST = 1000
-
-
-def init_cost_matrix(lines):
-	"""
-	This function initializes the cost matrix with appropriate
-	size.
-	:param lines: a list of lists containing lines
-	:param cost_matrix:
-	"""
-
-	num_sectors = len(lines)
-
-	# Infer the size of the cost matrix
-	row_size = 0
-	for i in range(num_sectors):
-		row_size += 2*len(lines[i])
-
-	cost_matrix = [[0 for i in range(row_size)] for i in range(row_size)]
-
-	return cost_matrix
 
 
 def compute_intrasector_transitions(lines):
@@ -104,15 +84,217 @@ def compute_intersector_transitions(lines, connectivity):
 	return inter_cost
 
 
-def gtsp_cost_matrix(cost_matrix, intra, inter):
+def init_dict_mapping(lines):
 	"""
-	Function will generate cost matrix for GLKH solver
+	:param lines: List of lists of lists
+	:return dict_mapping: A 1:1 mapping from vertex to line direction. This is needed to simplify access to direction.
+	"""
+
+	dict_mapping = {}
+	counter = 0
+
+	# For each convex polygon
+	for poly in range(len(lines)):
+
+		# For each line in convex polygon
+		for line in range(len(lines[poly])):
+
+			for dirc in range(len(lines[poly][line])):
+				dict_mapping.update({counter:(poly, line, dirc)})
+				counter += 1
+
+	return dict_mapping
+
+
+def init_cost_matrix(dict_map, lines):
+	"""
+	This function initializes and computer the cost matrix for GTSP.
+	:param dict_map: DIctionar of mapping from index to (poly, line, dir)
+	:param lines: List storing lines and dirs
+	:return cost_matrix: 2D cost Array
+	"""
+
+	# Number of entries in 2D cost array
+	num_nodes = len(dict_map)
+
+	# Number of clusters in GTSP instance
+	num_clusters = num_nodes/2	# Should always be divisible by two
+
+	cost_matrix = [[0 for i in range(num_nodes)] for i in range(num_nodes)]
+
+	# VER 1.0: Direct distance from node to node, even between non adjacent polys
+
+
+	# Important to remeber that dirr encodes the direction rather than point of entry.
+	# So dirr is actually just a point in the list but it represent a direction
+	# If entrance to line is in dirrection dirr, the actual point of entrance is the other point
+	for i in range(num_nodes):
+		for j in range(num_nodes):
+
+			if i == j:
+				continue
+
+			o_poly_idx, o_line_idx, o_dirr_idx = dict_map[i]
+			i_poly_idx, i_line_idx, i_dirr_idx = dict_map[j]
+
+			o_dirr = lines[o_poly_idx][o_line_idx][o_dirr_idx]
+			i_dirr = lines[i_poly_idx][i_line_idx][(1+i_dirr_idx)%2]
+
+			cost = sum( (a - b)**2 for a, b in zip(o_dirr, i_dirr)) 
+
+			cost_matrix[i][j] = cost
+
+
+	# Generate a cluster_array for completness
+	cluster_list = [[] for i in range(num_clusters)]
+	for i in range(num_nodes):
+		cluster_list[i/2].append(i)
+
+
+	return cost_matrix, cluster_list
+
+			
+def generate_gtsp_instance(filename, solver_loc, cost_matrix, cluster_array):
+	"""
+	This function will generate appropriate files for GTSP
+	solver and start the solver.
 	:param cost_matrix:
-	:param intra:
-	:param inter:
-	:return cost_matrix:
+	:return tour:
 	"""
 
-	num_clusters = len(inter)
+	num_nodes = len(cost_matrix)
+	num_clusters = len(cluster_array)
 
+	is_simple = False
+	if is_simple:
+
+		props_simp_dict = {'N': num_nodes,
+						'M': num_clusters,
+				   		'Symmetric': 'false',
+				   		'Triangle': 'false'}
+
+		with open(filename+".txt", "w") as f:
+			# Write the problem properties first
+			for k, v in props_simpl_dict.iteritems():
+				f.write(k+': '+str(v)+'\n')
+
+			# Write the node in cluster information
+			for i in range(num_clusters):
+				row = ""
+				for j in range(len(cluster_array[i])):
+					row += "%d "%(cluster_array[i][j])
+
+				row += "\n"
+				f.write(row)
+
+			# Write the cost matrix
+			for i in range(num_nodes):
+				row = ""
+				for j in range(num_nodes):
+					row += "%5d "%cost_matrix[i][j]
+				f.write(row+"\n")
+		os.system("cp "+filename+".txt "+'gtsp_related/')
+
+	else:
+
+		settings_dict = { 'PROBLEM_FILE': filename+'.gtsp',
+				'OUTPUT_TOUR_FILE': filename+'.tour',
+				#'ASCENT_CANDIDATES': 500,
+				#'INITIAL_PERIOD': 1000,
+				#'MAX_CANDIDATES': 30,
+				#'MAX_TRIALS': 1000,
+				#'POPULATION_SIZE': 5,
+				#'PRECISION': 10,
+				#'SEED': 1,
+				#'TRACE_LEVEL': 1,
+				'RUNS': 1}
+
+		props_dict = { 'NAME': filename,
+				'COMMENT': filename+': CPP using GTSP solver',
+				'TYPE': 'AGTSP',
+				'DIMENSION': num_nodes,
+				'GTSP_SETS': num_clusters,
+				'EDGE_WEIGHT_TYPE': 'EXPLICIT',
+				'EDGE_WEIGHT_FORMAT': 'FULL_MATRIX'}
+
+		
+		# Write GTSP instance settings
+		with open(filename+'.par', 'w') as f:
+
+			for k, v in settings_dict.iteritems():
+				f.write(k+' = '+str(v)+'\n')
+
+		# Write GTSP instance properties
+		with open(filename+".gtsp", "w") as f:
+
+			for k, v in props_dict.iteritems():
+				f.write(k+' = '+str(v)+'\n')
+
+
+			f.write("EDGE_WEIGHT_SECTION\n")
+
+			for i in range(num_nodes):
+				row = ""
+				for j in range(num_nodes):
+					row += "%5d "%cost_matrix[i][j]
+
+				f.write(row+"\n")
+		
+			f.write("GTSP_SET_SECTION\n")
+
+			for i in range(num_clusters):
+				row = "%d "%(i+1)
+				for j in range(len(cluster_array[i])):
+					if cluster_array[0][0] == 0:
+						row += "%d "%(cluster_array[i][j]+1)
+					else:
+						row += "%d "%(cluster_array[i][j])
+
+				row += "-1\n"
+				f.write(row)
+
+
+
+			f.write("EOF\n")
+			f.write("")
+
+		# Move the files to GTSP solver location
+		os.system("cp "+filename+".gtsp "+'gtsp_related/')
+		os.system("cp "+filename+".par "+'gtsp_related/')
+
+		os.system("mv "+filename+".gtsp "+solver_loc)
+		os.system("mv "+filename+".par "+solver_loc+"TMP/")
+
+
+		cur_dir = os.getcwd()
+		os.chdir(solver_loc)
+		cmd = "./GLKH "+"TMP/"+filename+".par"
 	
+		#print("[%18s] Launching the GLKH solver."%time_keeping.current_time())
+		os.system(cmd)	
+		#print("[%18s] GLKH solver has finished."%time_keeping.current_time())
+
+		# Cleanup
+		os.system("rm "+filename+".gtsp")
+		os.system("rm "+"TMP/"+filename+".par")
+
+		# Move the resulting file to home folder
+		os.system("mv "+filename+".tour "+cur_dir+'/gtsp_related/')
+
+		os.chdir(cur_dir)
+
+
+def read_tour(filename):
+
+	# Read in the results from the TSP solver results
+	with open('gtsp_related/'+filename+".tour", 'r') as f:
+		for i in range(6):
+			f.readline()
+
+		tour = []
+		str = f.readline()
+		while "EOF" not in str and "-1" not in str:
+			tour.append(int(str)-1)
+			str = f.readline()
+
+	return tour
