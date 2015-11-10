@@ -100,7 +100,6 @@ def plot_tour(ax, tour, lines, dict_map):
 		i_node = tour[i+1]
 
 		o_poly_idx, o_line_idx, o_dirr_idx = dict_map[o_node]
-		print dict_map[o_node]
 		i_poly_idx, i_line_idx, i_dirr_idx = dict_map[i_node]
 
 		o_pt = lines[o_poly_idx][o_line_idx][o_dirr_idx]
