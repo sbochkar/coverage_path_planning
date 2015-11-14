@@ -85,19 +85,18 @@ def coverage_path_planner(map_poly, method, specs):
 		cost_matrix, cluster_list = sc.init_cost_matrix(dict_mapping, lines)
 
 		print("[%18s] Launching GTSP instance."%tk.current_time())
-		gtsp.generate_gtsp_instance("cpp_test", "/home/sbochkar/misc/GLKH-1.0/", cost_matrix, cluster_list)
+		gtsp.generate_gtsp_instance("cpp_test", "/home/sbochkar/misc/GLKH-1.0/", True, cost_matrix, cluster_list)
 
 		print("[%18s] Reading the results."%tk.current_time())
 		tour = gtsp.read_tour("cpp_test")
+		print tour
+		tour = gtsp.process_tour(tour, cluster_list)
 		print tour
 
 #		for i in range(len(cost_matrix)):
 #			for j in range(len(cost_matrix)):
 #				print("%3d "%cost_matrix[i][j]),
 #			print 
-
-
-
 
 		ax = splot.init_axis()
 
@@ -127,6 +126,6 @@ if __name__ == "__main__":
 
 	map_poly = [(0, 0), (5, 0), (2, 4)]
 
-	specs = {"radius": 0.1}
+	specs = {"radius": 0.2}
 
 	coverage_path_planner(map_poly, Methods.local_line_sampling_2dir, specs)

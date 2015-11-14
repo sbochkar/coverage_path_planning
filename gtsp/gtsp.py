@@ -1,13 +1,63 @@
 import os
 
-		
-def generate_gtsp_instance(filename, solver_loc, cost_matrix, cluster_array):
+
+MAX_COST = 999999999
+
+
+def append_dummy_nodes(cost_matrix, cluster_array):
+
+	num_nodes = len(cost_matrix) + 2
+	num_clusters = len(cluster_array) + 2
+
+	cost_matrix_new = [[0 for i in range(num_nodes)] for i in range(num_nodes)]
+	cluster_list_new = list(cluster_array)
+
+	cluster_list_new.append([num_nodes-2])
+	cluster_list_new.append([num_nodes-1])
+
+	for i in range(len(cost_matrix)):
+		for j in range(len(cost_matrix)):
+			cost_matrix_new[i][j] = cost_matrix[i][j]
+
+	# INF COST EDGES TO DUMMY node
+	for i in range(num_nodes-1):
+		cost_matrix_new[i][-2] = MAX_COST
+		cost_matrix_new[-2][i] = MAX_COST
+
+	# Except starting node and finish node
+	cost_matrix_new[-2][0] = 0
+	cost_matrix_new[-2][1] = 0
+	cost_matrix_new[0][-2] = 0
+	cost_matrix_new[1][-2] = 0
+	cost_matrix_new[-2][-1] = 0
+	cost_matrix_new[-1][-2] = 0
+
+	# INF COST EDGES TO DUMMY node
+	for i in range(num_clusters-1):
+		cost_matrix_new[i][-1] = 0
+		cost_matrix_new[-1][i] = 0
+
+	# Except starting node and finish node
+	cost_matrix_new[-1][0] = MAX_COST
+	cost_matrix_new[-1][1] = MAX_COST
+	cost_matrix_new[0][-1] = MAX_COST
+	cost_matrix_new[1][-1] = MAX_COST
+	cost_matrix_new[-2][-1] = 0
+	cost_matrix_new[-1][-2] = 0
+
+	return cost_matrix_new, cluster_list_new
+
+
+def generate_gtsp_instance(filename, solver_loc, returns, cost_matrix, cluster_array):
 	"""
 	This function will generate appropriate files for GTSP
 	solver and start the solver.
 	:param cost_matrix:
 	:return tour:
 	"""
+
+	if not returns:
+		cost_matrix, cluster_array = append_dummy_nodes(cost_matrix, cluster_array)
 
 	num_nodes = len(cost_matrix)
 	num_clusters = len(cluster_array)
@@ -145,3 +195,18 @@ def read_tour(filename):
 			str = f.readline()
 
 	return tour
+
+def process_tour(tour, cluster_list):
+	
+	num_clusters = len(cluster_list)
+
+	if len(tour) > num_clusters:
+		if tour[-1] > num_clusters:
+			return tour[0:-1]
+		else:
+			new_tour = tour[0:1]
+			for i in range(len(tour)-1, 2, -1):
+				new_tour.append(tour[i])
+			return new_tour
+	else:
+		return tour
