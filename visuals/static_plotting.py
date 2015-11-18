@@ -111,6 +111,83 @@ def plot_tour(ax, tour, lines, dict_map):
 		ax.arrow(o_pt[0], o_pt[1], dx, dy, head_width=0.1, ec='green', length_includes_head=True, zorder=4)
 
 
+def plot_tour_dubins(ax, tour, lines, dict_map, r):
+	"""
+	Function will plot the GTSP tour.
+	:param ax:
+	:param tour: tour
+	:param lines:
+	:param dict_map: 
+	"""
+
+	import math
+	import dubins
+
+	for i in range(len(tour)-1):
+		o_node = tour[i]
+		i_node = tour[i+1]
+
+		o_poly_idx, o_line_idx, o_dirr_idx = dict_map[o_node]
+		e_poly_idx, e_line_idx, e_dirr_idx = dict_map[i_node]
+
+		o_line_2 = lines[o_poly_idx][o_line_idx][o_dirr_idx]
+		o_line_1 = lines[o_poly_idx][o_line_idx][(1+o_dirr_idx)%2]
+
+		e_line_2 = lines[e_poly_idx][e_line_idx][e_dirr_idx]
+		e_line_1 = lines[e_poly_idx][e_line_idx][(1+e_dirr_idx)%2]
+
+		o = tuple(x-y for x,y in zip(o_line_2, o_line_1))
+		e = tuple(x-y for x,y in zip(e_line_2, e_line_1))
+
+		o_m = math.sqrt(o[0]**2 + o[1]**2)
+		e_m = math.sqrt(e[0]**2 + e[1]**2)
+
+		o = (o[0]/o_m, o[1]/o_m)
+		e = (e[0]/e_m, e[1]/e_m)
+
+		dproduct_o = o[0]	# dproduct with x-axis
+		dproduct_e = e[0]
+
+		# Need true angle rather than limited to [-pi, 0]
+		if o[1] < 0:
+			o_angl = -math.acos(dproduct_o)
+		else:
+			o_angl = math.acos(dproduct_o)
+
+		if e[1] < 0:
+			e_angl = -math.acos(dproduct_e)
+		else:
+			e_angl = math.acos(dproduct_e)
+
+		#print (o_line_2, o_line_1), (i_line_2, i_line_1)
+		q0 = (o_line_2[0], o_line_2[1], o_angl)
+		q1 = (e_line_1[0], e_line_1[1], e_angl)
+		smpls, _ = dubins.path_sample(q0, q1, r, 0.05)
+
+		x = []
+		y = []
+		xarrow = 0
+		yarrow = 0
+		for smpl in smpls:
+			xt, yt, at = smpl
+			x.append(xt)
+			y.append(yt)
+
+			if len(x) == int(math.floor(len(smpls)/2)):
+				# Insert arrow mid way through dubins curve
+				xarrow = x[int(math.floor(len(smpls)/2))-2]
+				yarrow = y[int(math.floor(len(smpls)/2))-2]
+
+				dx = x[int(math.floor(len(smpls)/2))-1] - x[int(math.floor(len(smpls)/2))-2]
+				dy = y[int(math.floor(len(smpls)/2))-1] - y[int(math.floor(len(smpls)/2))-2]
+
+
+		ax.scatter(x, y, s=0.4, color='green', zorder=4)
+		#dx = i_pt[0] - o_pt[0]
+		#dy = i_pt[1] - o_pt[1]
+
+		ax.arrow(xarrow, yarrow, dx, dy, head_width=0.15, ec='green', length_includes_head=True, zorder=4)
+
 
 def display():
 	"""

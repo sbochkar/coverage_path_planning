@@ -31,6 +31,7 @@ import decomposer as dec
 import line_samplers as lsmpl
 import static_plotting as splot
 import simple_cost as sc
+import dubins_cost as dc
 import gtsp
 
 
@@ -45,17 +46,12 @@ def coverage_path_planner(map_poly, method, specs):
 	Top function for coverage path planning.
 	Accepts a map in the form of a sequence of points and bot specs.
 	Return a coverage path.
-	:param map_poly: A list of (x, y) tuples representing a map
+	:param map_poly: A list of (x, y) tuples representing a map plus a list of holes
 	:param method: Method to use for planning
 	:param specs: Dict of specs of the bot
 	:return path: Coverage path
 	"""
 
-
-	# Check the map validity
-	if len(map_poly) < 3:
-		print("[%18s] Error! Map specification is wrong."%tk.current_time())
-		return None
 
 	# Extract radius
 	radius = specs["radius"]
@@ -68,36 +64,31 @@ def coverage_path_planner(map_poly, method, specs):
 		print("[%18s] Invoking greedy decomposition."%tk.current_time())
 		cvx_set, connectivity, shared_edges = dec.greedy_decompose(map_poly)
 		print("[%18s] Finished greedy decomposition."%tk.current_time())
-
+		print cvx_set
+		print connectivity
+		print shared_edges
 		print("[%18s] Startint to sample the free space with lines."%tk.current_time())
-		lines = lsmpl.ilp_finite_dir_line_sampling(cvx_set, connectivity, shared_edges, [0, math.pi/4, math.pi/3, math.pi/2], specs)
-		print lines[0][0][0]
-		temp = lines[0][0][0]
-		lines[0][0][0] = lines[0][0][1]
-		lines[0][0][1] = temp
-		print lines[0][0][0]
+		lines = lsmpl.ilp_finite_dir_line_sampling(cvx_set, connectivity, shared_edges, [0, math.pi/6, math.pi/4, math.pi/3, math.pi/2], specs)
+
+		#print lines[0][0][0]
+		#temp = lines[0][0][0]
+		#lines[0][0][0] = lines[0][0][1]
+		#lines[0][0][1] = temp
+		#print lines[0][0][0]
 		print("[%18s] Finished samling."%tk.current_time())
 
 		print("[%18s] Initializing GTSP cost matrix."%tk.current_time())
 		dict_mapping = lsmpl.init_dict_mapping(lines)
 
 		print("[%18s] Computing the cost matrix."%tk.current_time())
-		cost_matrix, cluster_list = sc.init_cost_matrix(dict_mapping, lines)
-
+		#cost_matrix, cluster_list = sc.init_cost_matrix(dict_mapping, lines)
+		cost_matrix, cluster_list = dc.init_cost_matrix(dict_mapping, lines, specs)
 		print("[%18s] Launching GTSP instance."%tk.current_time())
-		gtsp.generate_gtsp_instance("cpp_test", "/home/sbochkar/misc/GLKH-1.0/", True, cost_matrix, cluster_list)
+		gtsp.generate_gtsp_instance("cpp_test", "/home/stan/misc/GLKH-1.0/", True, cost_matrix, cluster_list)
 
 		print("[%18s] Reading the results."%tk.current_time())
 		tour = gtsp.read_tour("cpp_test")
-		print tour
 		tour = gtsp.process_tour(tour, cluster_list)
-		print tour
-
-#		for i in range(len(cost_matrix)):
-#			for j in range(len(cost_matrix)):
-#				print("%3d "%cost_matrix[i][j]),
-#			print 
-
 		ax = splot.init_axis()
 
 		# Implementation missing for now
@@ -110,7 +101,8 @@ def coverage_path_planner(map_poly, method, specs):
 		splot.plot_samples(ax, lines)
 
 		print("[%18s] Plotting path."%tk.current_time())
-		splot.plot_tour(ax, tour, lines, dict_mapping)
+		#splot.plot_tour(ax, tour, lines, dict_mapping)
+		splot.plot_tour_dubins(ax, tour, lines, dict_mapping, radius)
 
 		splot.display()
 		
@@ -124,8 +116,50 @@ def coverage_path_planner(map_poly, method, specs):
 
 if __name__ == "__main__":
 
-	map_poly = [(0, 0), (5, 0), (2, 4)]
-
 	specs = {"radius": 0.2}
+	mappp = 2
+
+	if mappp == 0:
+
+		poly = [(5.0, 0),
+				(10.0, 0),
+				(10.0, 5.0),
+				(15.0, 5.0),
+				(15.0, 10.0),
+				(10.0, 10.0),
+				(10.0, 15.0),
+				(5.0, 15.0),
+				(5.0, 10.0),
+				(0.0, 10.0),
+				(0.0, 5.0),
+				(5.0, 5.0)]
+
+		holes = [[(6, 6),
+				  (6, 9),
+				  (9, 9),
+				  (9, 6)]]
+	elif mappp == 1:
+		poly = [(0.0, 0),
+				(5.0, 0),
+				(5.0, 5.0),
+				(0.0, 5.0)]
+		holes = [[(1, 1),
+				  (1, 4),
+				  (4, 4),
+				  (4, 1)]]
+
+	elif mappp == 2:
+		poly = [(0.0, 0),
+				(15.0, 0),
+				(15.0, 5.0),
+				(10.0, 5.0),
+				(10.0, 10.0),
+				(5.0, 10.0),
+				(5.0, 5.0),
+				(0.0, 5.0)]
+		holes = []		
+
+	map_poly = [poly, holes]
+
 
 	coverage_path_planner(map_poly, Methods.local_line_sampling_2dir, specs)

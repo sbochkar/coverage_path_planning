@@ -1,4 +1,6 @@
-#!/usr/bin/env python3
+from py2d.vecmath import Polygon
+
+
 
 def greedy_decompose(map_poly):
 	"""
@@ -8,6 +10,85 @@ def greedy_decompose(map_poly):
 	:return connect_graph: Connectivity graph of the regions
 	:return shared_edges: Matrix showing shared edges between regions
 	"""
+
+	poly_xy, holes = map_poly
+
+	exter = Polygon.Polygon.from_tuples(poly_xy)
+
+	# Convert to polygon class
+	holes_p = []
+	for hole in holes:
+		hole_p = Polygon.Polygon.from_tuples(hole)
+		holes_p.append(hole_p)
+
+	# Perform the decomposition
+	decomposed = Polygon.Polygon.convex_decompose(exter, holes_p)
+	
+	if not decomposed:
+		print "ERROR! Decomposition resulted in empty list"
+
+
+	#for poly in decomposed:
+	#	print poly
+
+	#print [decomposed[0].as_tuple_list()[-1] + decomposed[0].as_tuple_list()[0]]
+
+	# Start generating connectivity matricies and shared edges array
+	cvx_set = [poly.as_tuple_list() for poly in decomposed]
+
+	connectivity = [[0 for i in range(len(decomposed))] for i in range(len(decomposed))]
+	shared_edges = [[None for i in range(len(decomposed))] for i in range(len(decomposed))]
+
+
+	for c1 in range(len(decomposed)):
+		for c2 in range(c1+1, len(decomposed)):
+
+			# Test each edge on each cell to look for same edges
+			# This if to find adjacent edges
+			for i in range(1, len(decomposed[c1])+1):
+
+				if i == len(decomposed[c1]):
+					edge_1 = [decomposed[c1].as_tuple_list()[-1], decomposed[c1].as_tuple_list()[0]]
+				else:
+					edge_1 = decomposed[c1].as_tuple_list()[i-1:i+1]
+				
+				for j in range(1, len(decomposed[c2])+1):
+
+					if j == len(decomposed[c2]):
+						edge_2 = [decomposed[c2].as_tuple_list()[-1], decomposed[c2].as_tuple_list()[0]]
+					else:
+						edge_2 = decomposed[c2].as_tuple_list()[j-1:j+1]
+
+					def compare_edges(edge1, edge2):
+						for tupl in edge1:
+							if tupl not in edge2:
+								return False
+						return True
+
+					if compare_edges(edge_1, edge_2):
+						connectivity[c1][c2] = 1
+						connectivity[c2][c1] = 1
+
+						shared_edges[c1][c2] = edge_1
+						shared_edges[c2][c1] = edge_1
+
+	#print connectivity
+	#for i in range(len(shared_edges)):
+	#	print
+	#	for j in range(len(shared_edges)):
+	#		print("%30s "%shared_edges[i][j]),
+	#print shared_edges
+	return cvx_set, connectivity, shared_edges
+
+def manual_decompose(map_poly):
+	"""
+	Funcion will decompose a map into a set of convex polygon using greedy cut.
+	:param map_poly: Original map
+	:return cvx_set: Set of convex polygons
+	:return connect_graph: Connectivity graph of the regions
+	:return shared_edges: Matrix showing shared edges between regions
+	"""
+
 
 	NUM = 1
 	cvx_sets = []
@@ -202,4 +283,47 @@ def greedy_decompose(map_poly):
 
 
 if __name__ == "__main__":
-	greedy_decompose([])
+	poly = [(1.0, 0),
+				(2.0, 0),
+				(2.0, 1.0),
+				(3.0, 1.0),
+				(3.0, 2.0),
+				(2.0, 2.0),
+				(2.0, 3.0),
+				(1.0, 3.0),
+				(1.0, 2.0),
+				(0.0, 2.0),
+				(0.0, 1.0),
+				(1.0, 1.0)]
+
+	holes = [[(1.2, 1.2),
+			  (1.2, 1.8),
+			  (1.8, 1.8),
+			  (1.8, 1.2)]]
+
+#	poly = [(0.0, 0),
+#				(5.0, 0),
+#				(5.0, 5.0),
+#				(0.0, 5.0)]
+#	holes = [[(1, 1),
+#			  (1, 4),
+#			  (4, 4),
+#			  (4, 1)]]
+
+#	poly = [(0.0, 0),
+#				(1.0, 0),
+#				(1.0, 1.0),
+#				(2.0, 1.0),
+#				(2.0, 2.0),
+#				(0.0, 2.0)]
+#
+#	holes = []
+
+
+
+
+
+
+	map_poly = [poly, holes]
+
+	greedy_decompose(map_poly)
