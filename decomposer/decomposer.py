@@ -1,6 +1,4 @@
-from py2d.vecmath import Polygon
-
-
+from py2d.Math import Polygon
 
 def greedy_decompose(map_poly):
 	"""
@@ -13,16 +11,16 @@ def greedy_decompose(map_poly):
 
 	poly_xy, holes = map_poly
 
-	exter = Polygon.Polygon.from_tuples(poly_xy)
+	exter = Polygon.from_tuples(poly_xy)
 
 	# Convert to polygon class
 	holes_p = []
 	for hole in holes:
-		hole_p = Polygon.Polygon.from_tuples(hole)
+		hole_p = Polygon.from_tuples(hole)
 		holes_p.append(hole_p)
 
 	# Perform the decomposition
-	decomposed = Polygon.Polygon.convex_decompose(exter, holes_p)
+	decomposed = Polygon.convex_decompose(exter, holes_p)
 	
 	if not decomposed:
 		print "ERROR! Decomposition resulted in empty list"

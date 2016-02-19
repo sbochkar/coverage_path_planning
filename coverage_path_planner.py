@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 
 
 # Global moduls
@@ -25,7 +24,6 @@ for subfolder in subfolders:
 	if cmd_subfolder not in sys.path:
 		sys.path.insert(0, cmd_subfolder)
 
-
 import time_keeping as tk
 import decomposer as dec
 import line_samplers as lsmpl
@@ -33,7 +31,6 @@ import static_plotting as splot
 import simple_cost as sc
 import dubins_cost as dc
 import gtsp
-
 
 # Define Enum for methods
 class Methods(Enum):
@@ -68,7 +65,7 @@ def coverage_path_planner(map_poly, method, specs):
 		print connectivity
 		print shared_edges
 		print("[%18s] Startint to sample the free space with lines."%tk.current_time())
-		lines = lsmpl.ilp_finite_dir_line_sampling(cvx_set, connectivity, shared_edges, [0, math.pi/6, math.pi/4, math.pi/3, math.pi/2], specs)
+		lines = lsmpl.ilp_finite_dir_line_sampling(cvx_set, connectivity, shared_edges, [0, math.pi/2], specs)
 
 		#print lines[0][0][0]
 		#temp = lines[0][0][0]
@@ -84,7 +81,7 @@ def coverage_path_planner(map_poly, method, specs):
 		#cost_matrix, cluster_list = sc.init_cost_matrix(dict_mapping, lines)
 		cost_matrix, cluster_list = dc.init_cost_matrix(dict_mapping, lines, specs)
 		print("[%18s] Launching GTSP instance."%tk.current_time())
-		gtsp.generate_gtsp_instance("cpp_test", "/home/stan/misc/GLKH-1.0/", True, cost_matrix, cluster_list)
+		gtsp.generate_gtsp_instance("cpp_test", "/home/sbochkar/misc/GLKH-1.0/", True, cost_matrix, cluster_list)
 
 		print("[%18s] Reading the results."%tk.current_time())
 		tour = gtsp.read_tour("cpp_test")
@@ -116,8 +113,8 @@ def coverage_path_planner(map_poly, method, specs):
 
 if __name__ == "__main__":
 
-	specs = {"radius": 0.2}
-	mappp = 2
+	specs = {"radius": 0.3}
+	mappp = 1
 
 	if mappp == 0:
 
