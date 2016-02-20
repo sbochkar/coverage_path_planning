@@ -57,35 +57,122 @@ def get_altitude(P, theta):
 	if len(P) > 1:
 		holes_orig = P[1] 
 
-
+	# Rotate the polygon to align with x-axis
 	ext = rotate(ext_orig, -theta)
 
 	holes = []
 	for hole in holes_orig:
 		holes.append(rotate(hole, -theta))
 
-	ext_sorted = sorted(ext, key=itemgetter(1))
+	# Form an adjacency list
+	adjacency_dict = {}
 
-	holes_sorted = []
-	for hole in holes_sorted:
-		holes_sorted.append(sorted(hole, key=itemgetter(1)))
+	n = len(ext)
+	for i in range(n):
+		adjacency_dict[ext[i]] = [ext[(i+1)%n], ext[(i-1)%n]]
+
+	for hole in holes:
+		n = len(hole)
+		for i in range(n):
+			adjacency_dict[hole[i]] = [hole[(i+1)%n], hole[(i-1)%n]]			
+
+	# Create list of keys sorted by x-coordinates
+	keys_sorted_by_x = sorted(adjacency_dict.keys(), key=itemgetter(0))
+
+	# Record the min_x and initialize altitude and key with events
+	min_x = keys_sorted_by_x[0][0]
+	altitude = 0
+	active_event_counter = 0
+	repeated_event_keys = []
+
+	# Go through each vertex and increment altitude accordingly
+	for i in range(len(keys_sorted_by_x)):
+
+		# If event has been captured by adjacent same level vertex -> ignore
+		if keys_sorted_by_x[i] in repeated_event_keys:
+			continue
+
+		current_x, current_y = keys_sorted_by_x[i]
+		adjacent_x_1, adjacent_y_1 = adjacency_dict[keys_sorted_by_x[i]][0]
+		adjacent_x_2, adjacent_y_2 = adjacency_dict[keys_sorted_by_x[i]][1]
+
+		if i>0:
+			delta_x = keys_sorted_by_x[i][0]-keys_sorted_by_x[i-1][0]	
+			altitude += active_event_counter*delta_x
+
+		# Handle cases where adjacent edges are on the same level as the test pt
+		if (adjacent_x_1 > current_x):
+			if (adjacent_x_2 == current_x):
+				repeated_event_keys.append(adjacency_dict[keys_sorted_by_x[i]][1])
+				active_event_counter += 1
+			elif (adjacent_x_2 > current_x):
+				active_event_counter += 1
+
+			continue
+
+		if (adjacent_x_2 > current_x):
+			if (adjacent_x_1 == current_x):
+				repeated_event_keys.append(adjacency_dict[keys_sorted_by_x[i]][0])
+				active_event_counter += 1
+			elif (adjacent_x_1 > current_x):
+				active_event_counter += 1
+
+			continue
+
+		if (adjacent_x_1 < current_x):
+			if (adjacent_x_2 == current_x):
+				repeated_event_keys.append(adjacency_dict[keys_sorted_by_x[i]][1])
+				active_event_counter -= 1
+			elif (adjacent_x_2 < current_x):
+				active_event_counter -= 1
+
+			continue
+
+		if (adjacent_x_2 < current_x):
+			if (adjacent_x_1 == current_x):
+				repeated_event_keys.append(adjacency_dict[keys_sorted_by_x[i]][0])
+				active_event_counter -= 1
+			elif (adjacent_x_1 < current_x):
+				active_event_counter -= 1
+
+			continue
+
+		print("Test point: (%f, %f)"%(current_x, current_y))
+		print("Adj1 point: (%f, %f)"%(adjacent_x_1, adjacent_y_1))
+		print("Adj2 point: (%f, %f)"%(adjacent_x_2, adjacent_y_2))
+		print("Counter: %d"%active_event_counter)
+		print("Altitude: %f"%altitude)
+		print repeated_event_keys
+		print""
+	return altitude
 
 if __name__ == "__main__":
 
+#	ext = [(0, 0),
+#			(12, 0),
+#			(12, 20),
+#			(0, 20)]
+#
+#	holes = [[(1, 1),
+#			(2, 1),
+#			(2, 2),
+#			(1, 2)],
+#			[(8,8),
+#			(9, 8),
+#			(9, 9),
+#			(8, 9)]]
+
 	ext = [(0, 0),
-			(10, 0),
-			(10, 10),
-			(0, 10)]
+		(10, 0),
+		(10, 10),
+		(0, 10),
+		(2, 5)]
 
-	holes = [
-				[(1, 1),
-					(2, 1),
-					(2, 2),
-					(1, 2)],
-				[(8,8),
-			 		(9, 8),
-			 		(9, 9),
-			 		(8, 9)]
-			]
+# Make sure holes are cw.
+	holes = [[(3,2),
+			  (5,2),
+			  (4,3),
+			  (5,4),
+			  (3,4)]]
 
-	get_altitude([ext, holes], 0)
+	print("Altitude is: %f"%get_altitude([ext, holes], 0))
