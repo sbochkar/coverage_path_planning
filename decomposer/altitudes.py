@@ -137,14 +137,67 @@ def get_altitude(P, theta):
 
 			continue
 
-		print("Test point: (%f, %f)"%(current_x, current_y))
-		print("Adj1 point: (%f, %f)"%(adjacent_x_1, adjacent_y_1))
-		print("Adj2 point: (%f, %f)"%(adjacent_x_2, adjacent_y_2))
-		print("Counter: %d"%active_event_counter)
-		print("Altitude: %f"%altitude)
-		print repeated_event_keys
-		print""
+#		print("Test point: (%f, %f)"%(current_x, current_y))
+#		print("Adj1 point: (%f, %f)"%(adjacent_x_1, adjacent_y_1))
+#		print("Adj2 point: (%f, %f)"%(adjacent_x_2, adjacent_y_2))
+#		print("Counter: %d"%active_event_counter)
+#		print("Altitude: %f"%altitude)
+#		print repeated_event_keys
+#		print""
 	return altitude
+
+
+def find_reflex_vertices(P):
+	"""
+	Return a list of reflex vertices in P
+
+	Function will iterate over all vertices in P and return a list of reflex
+	vertices
+
+	Args:
+		P: (ext, [int]) tuple of list of (x,y) vertices 
+			ext is a ccw list of vertices for boundary
+			int is cw list of vertices for holes
+	Returns:
+		R: A list of reflex vertices
+	"""
+
+	ext = P[0]
+	if len(P) > 1:
+		holes = P[1] 	
+
+	R = []
+
+	# Reflex vertices on the boundary first
+	n = len(ext)
+	for i in range(n):
+		p_0 = ext[(i-2)%n]
+		p_1 = ext[(i-1)%n]
+		p_2 = ext[i]
+
+		dx_1 = float(p_1[0])-float(p_0[0])
+		dy_1 = float(p_1[1])-float(p_0[1])
+		dx_2 = float(p_2[0])-float(p_1[0])
+		dy_2 = float(p_2[1])-float(p_1[1])
+		if dx_1*dy_2-dy_1*dx_2 < 0.0:
+			R.append(p_1)
+
+	# Reflex vertices from holes
+	for hole in holes:
+		n = len(hole)
+		for i in range(n):
+			p_0 = hole[(i-2)%n]
+			p_1 = hole[(i-1)%n]
+			p_2 = hole[i]
+
+			dx_1 = float(p_1[0])-float(p_0[0])
+			dy_1 = float(p_1[1])-float(p_0[1])
+			dx_2 = float(p_2[0])-float(p_1[0])
+			dy_2 = float(p_2[1])-float(p_1[1])
+			if dx_1*dy_2-dy_1*dx_2 < 0.0:
+				R.append(p_1)		
+
+	return R
 
 if __name__ == "__main__":
 
@@ -170,9 +223,10 @@ if __name__ == "__main__":
 
 # Make sure holes are cw.
 	holes = [[(3,2),
-			  (5,2),
-			  (4,3),
+			  (3,4),
 			  (5,4),
-			  (3,4)]]
+			  (4,3),
+			  (5,2)]]
 
 	print("Altitude is: %f"%get_altitude([ext, holes], 0))
+	print find_reflex_vertices([ext, holes])
