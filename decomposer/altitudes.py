@@ -2,7 +2,12 @@
 from math import cos
 from math import sin
 from math import pi
+from math import atan2
 from operator import itemgetter
+from shapely.geometry import LineString
+from shapely.geometry import Polygon
+import numpy as np
+import visilibity as vis
 
 
 def rotate(vertices, theta):
@@ -199,6 +204,181 @@ def find_reflex_vertices(P):
 
 	return R
 
+
+def find_transition_point(s_orig, theta, cut_origin):
+	"""
+	Returns transition for a polygon, a cut space segment, and a direction of
+		altitude
+
+	Function will perform a series of geometric functions to return a transition
+		point.
+
+	Args:
+		s: a straight line segment
+		theta: direction w.r.t. x-axis
+		cut_origin: vertex of origin of cone of bisection
+	Returns:
+		trans_point: a transition point
+	"""
+
+	s = rotate(s_orig, -theta)
+	cut_origin = rotate([cut_origin], -theta)[0]
+
+	y_s_min_idx, y_s_min = min(enumerate(s), key=itemgetter(1))
+	y_s_max_idx, y_s_max = max(enumerate(s), key=itemgetter(1))
+
+	x_s_min_idx, x_s_min = min(enumerate(s), key=itemgetter(0))
+	x_s_max_idx, x_s_max = max(enumerate(s), key=itemgetter(0))
+
+	# Check the easy cases first
+	if y_s_min[1] >= cut_origin[1]:
+		return s_orig[y_s_min_idx]
+	elif y_s_max[1] <= cut_origin[1]:
+		return s_orig[y_s_max_idx]
+	else:
+		# Find the intersection which corresponds to transition point
+		hyperplane = LineString([(x_s_min[0], cut_origin[1]), (cut_origin[0], cut_origin[1])])
+		cut_segment = LineString(s)
+		transition_point = cut_segment.intersection(hyperplane)
+
+		if not transition_point:
+			print "Not suppose to happen"
+		return rotate([transition_point.coords[0]], theta)[0]
+
+
+def find_best_transition_point(s, cut_origin, dir_l, dir_r):
+	"""
+	Find the best transition point from the left and right polygon
+
+	Given left and right polygons, cut segment, and two altitude directions,
+	return the best transition point.
+
+	Args:
+
+		s:
+		dir_l:
+		dir_r:
+	Returns:
+		trans_point: a transition point
+	"""
+
+
+	t_l = find_transition_point(s, dir_l, cut_origin)
+	t_r = find_transition_point(s, dir_r, cut_origin)
+
+	x_s, y_s = s[0]
+
+	x_t_l, y_t_l = t_l
+
+	x_t_r, y_t_r = t_r
+
+	dt_l = (x_t_l-x_s)**2+(y_t_l-y_s)**2
+	dt_r = (x_t_r-x_s)**2+(y_t_r-y_s)**2
+
+	print t_l, t_r
+	if dt_l >= dt_r:
+		return t_r
+	else:
+
+		s_l = rotate(s,-dir_l)
+		ds_l = abs(s_l[1][0]-s_l[0][0])
+
+		s_r = rotate(s,-dir_r)
+		ds_r = abs(s_r[1][0]-s_r[0][0])
+
+		if ds_l > ds_r:
+			return t_l
+		else:
+			return t_r
+
+
+def get_directions(P):
+	"""
+	Generate a list of directions orthogonal to edges of P
+		P: ls
+	"""
+	
+
+	ext = P[0]
+	holes = P[1]
+
+	dirs = []
+
+	n = len(ext)
+	for i in range(n):
+		edge = [ext[i], ext[(i+1)%n]]
+		ax, ay = edge[0]
+		bx, by = edge[1]
+
+		#print 180*(atan2(by-ay, bx-ax)+pi/2)/pi
+		dirs.append(atan2(by-ay, bx-ax)+pi/2)
+
+
+	for hole in holes:
+		n = len(hole)
+		for i in range(n):
+			edge = [ext[i], ext[(i+1)%n]]
+			ax, ay = edge[0]
+			bx, by = edge[1]
+
+			#print 180*(atan2(by-ay, bx-ax)+pi/2)/pi
+			dirs.append(atan2(by-ay, bx-ax)+pi/2)
+
+	return dirs
+
+
+def find_cut_space(P, v):
+	"""
+	Generate the cut space at v using Visilibity library.
+	"""
+
+
+	epsilon = 0.0000001
+	wall_points = []
+	for point in P[0]:
+		wall_points.append(vis.Point(*point))
+
+	walls = vis.Polygon(wall_points)
+	#print walls.is_in_standard_form()
+
+	holes = []
+	for hole_list in P[1]:
+		hole_points = []
+		for point in hole_list:
+			hole_points.append(vis.Point(*point))
+
+		holes.append(vis.Polygon(hole_points))
+		#print hole.is_in_standard_form()
+
+	if len(holes)>0:
+		env = vis.Environment([walls, holes])
+	else:
+		env = vis.Environment([walls])
+	#print env.is_valid(epsilon)
+
+	observer = vis.Point(*v)
+	observer.snap_to_boundary_of(env, epsilon)
+	observer.snap_to_vertices_of(env, epsilon)
+	isovist = vis.Visibility_Polygon(observer, env, epsilon)
+
+	def save_print(polygon):
+		end_pos_x = []
+		end_pos_y = []
+		for i in range(polygon.n()):
+			x = polygon[i].x()
+			y = polygon[i].y()
+
+			end_pos_x.append(x)
+			end_pos_y.append(y)
+
+		return end_pos_x, end_pos_y 
+
+	point_x , point_y  = save_print(isovist)
+	point_x.append(isovist[0].x())
+	point_y.append(isovist[0].y())  
+
+	print zip(point_x, point_y)
+
 if __name__ == "__main__":
 
 #	ext = [(0, 0),
@@ -215,18 +395,42 @@ if __name__ == "__main__":
 #			(9, 9),
 #			(8, 9)]]
 
-	ext = [(0, 0),
-		(10, 0),
-		(10, 10),
-		(0, 10),
-		(2, 5)]
+#	ext = [(0, 0),
+#		(10, 0),
+#		(10, 10),
+#		(0, 10),
+#		(2, 5)]
+#
+#	# Make sure holes are cw.
+#	holes = [[(3,2),
+#			  (3,4),
+#			  (5,4),
+#			  (4,3),
+#			  (5,2)]]
 
-# Make sure holes are cw.
-	holes = [[(3,2),
-			  (3,4),
-			  (5,4),
-			  (4,3),
-			  (5,2)]]
+#	ext = [(0,0),
+#			(10,0),
+#			(10,1),
+#			(8,6),
+#			(5,5),
+#			(0,1)]
+#
+#	holes = []
+
+	ext = [(0,0),
+			(3,0),
+			(4,1),
+			(5,0),
+			(8,0),
+			(8,5),
+			(0,5)]
+
+	holes = []
+
 
 	print("Altitude is: %f"%get_altitude([ext, holes], 0))
 	print find_reflex_vertices([ext, holes])
+	print find_cut_space([ext,holes], find_reflex_vertices([ext, holes])[0])
+	#print get_directions([ext, holes])
+	#print("Transition point: %s"%(find_transition_point([(0,1),(0,10)], 0, (8,6)),))
+	#print("Transition point: %s"%(find_best_transition_point([(0,1),(0,10)], (8,6), 0, 0),))
