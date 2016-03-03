@@ -6,6 +6,7 @@ from math import atan2
 from math import degrees
 from operator import itemgetter
 import shapely
+from shapely.geometry import Point
 from shapely.geometry import LineString
 from shapely.geometry import Polygon
 import numpy as np
@@ -277,7 +278,7 @@ def find_best_transition_point(s, cut_origin, dir_l, dir_r):
 	dt_l = (x_t_l-x_s)**2+(y_t_l-y_s)**2
 	dt_r = (x_t_r-x_s)**2+(y_t_r-y_s)**2
 
-	print t_l, t_r
+	#print t_l, t_r
 	if dt_l >= dt_r:
 		return t_r
 	else:
@@ -333,13 +334,10 @@ def find_cone_of_bisection(P, v):
 	"""
 	Return a polygon representing the cone of bisection
 	"""
-	rad = 6
+	rad = 20
 
 	ext = P[0]
 	holes = P[1]
-
-
-	sh_poly = Polygon(ext,holes)
 
 	# Form an adjacency list
 	adjacency_dict = {}
@@ -358,16 +356,24 @@ def find_cone_of_bisection(P, v):
 	v2 = adjacency_dict[v][1]
 	triangle = [v2,v,v1]
 
+	#print triangle
+
 	# Find the sweeping angle of the arc
 	a0 = atan2(v[1]-v2[1],v[0]-v2[0])
 	a1 = atan2(v1[1]-v[1],v1[0]-v[0])
-	angle = a1-a0
-	if angle < 0:
-		angle += 2*pi
-	angle = 2*pi-angle
 
+	
+	angle = abs(a1-a0)
+	#if angle < 0:
+	#	angle += 2*pi
+	angle = pi-angle
+
+	#print degrees(a0), degrees(a1)
+	#print("Arc.ang: %f"%(180-abs(degrees(a1-a0))))
 	# Find the center angle of the arc
-	orient = (a0+(pi/2-a1))/2
+	#orient = (a0+(pi/2-a1))/2
+	orient = pi-(angle/2+abs(a1))
+
 	p = []
 
 	p.append(v)
@@ -468,16 +474,55 @@ def find_cut_space(P, v):
 	point_y.append(vis_free_space[0].y())  
 
 
+	###
+	# At this point, we have visibility polygon.
+	# Now we need to find edges of visbility polygon which are on the boundary
+
+
+	shp_visib = shapely.geometry.polygon.orient(Polygon(zip(point_x, point_y)),-1)
+	shp_ls_visib = LineString(shp_visib.exterior.coords[:])
+
+	shp_ls_exterior = LineString(shp_polygon.exterior)
+	shp_ls_interior = []
+	for interior in shp_polygon.interiors:
+	 	shp_ls_interior.append(LineString(interior))
+
+	# Start adding cut space on the exterior
+	cut_space = []
+	common_items = shp_ls_exterior.intersection(shp_ls_visib)
+	for item in common_items:
+		if item.geom_type == "LineString":
+			cut_space.append(item.coords[:])
+
+
+	# Start adding cut space on the holes
+	for interior in shp_polygon.interiors:
+		common_items = interior.intersection(shp_ls_visib)
+		if common_items.geom_type == "GeometryCollection":
+#			print common_items
+			for item in common_items:
+				if item.geom_type == "LineString":
+					cut_space.append(item.coords[:])
+		elif common_items.geom_type == "LineString":
+			cut_space.append(common_items.coords[:])
+		#Point, LineString, GeometryCollection
+
+	print cut_space
+
 	# PLOTTING
 	import pylab as p
+
+	# Plot the polygon itself
+	x, y = shp_polygon.exterior.xy
+	p.plot(x, y)
 
 	# plot the intersection of the cone with the polygon
 	intersection_x, intersection_y = shp_intersection.exterior.xy
 	p.plot(intersection_x, intersection_y)
 
-	for interior in shp_intersection.interiors:
-		interior_x, interior_y = interior.xy
-		p.plot(interior_x, interior_y)
+	#for interior in shp_intersection.interiors:
+	#	interior_x, interior_y = interior.xy
+	#	p.plot(interior_x, interior_y)
 
 	# Plot the reflex vertex
 	p.plot([observer.x()], [observer.y()], 'go')
@@ -485,6 +530,96 @@ def find_cut_space(P, v):
 	p.plot(point_x, point_y)
 
 	p.show()
+	return cut_space
+
+
+def find_optimal_cut(P, v):
+	"""
+	Find optimal cut
+	"""
+
+
+	dirs_left = []
+	dirs_right = []
+	pois = []
+
+	# Get altitude of P
+	a = get_altitude(P, pi/2)
+
+	s = find_cut_space(P, v)
+	cut_point = s[0][1]
+
+	p_l, p_r = perform_cut(P, [v, cut_point])
+
+	dirs_left = get_directions([p_l, []])
+	dirs_right = get_directions([p_r, []])
+	#print dirs_left
+	#print list(degrees(dir) for dir in dirs_left)
+
+	#print get_altitude([p_l,[]], 3.5598169831690223)
+	#print get_altitude([p_r,[]], 0)
+
+	for si in s:
+		for dir1 in dirs_left:
+			for dir2 in dirs_right:
+				tp = find_best_transition_point(si, v, dir1, dir2)
+				pois.append((tp, dir1, dir2))
+
+	# Evaluate all transition points
+	min_cost = a;
+	min_cost_idx = -1;
+	for case in pois:
+		p_l, p_r = perform_cut(P, [v, case[0]])
+
+		a_l = get_altitude([p_l, []], case[1])
+		a_r = get_altitude([p_r, []], case[2])
+		#print a_l, a_r
+		if a_l+a_r<=min_cost:
+			min_cost = a_l+a_r
+			min_cost_idx = case
+
+	print min_cost, min_cost_idx
+
+
+
+def perform_cut(P, e):
+	"""
+	Split up P into two polygons
+	"""
+
+
+	v = e[0]
+	w = e[1]
+	chain = LineString(P[0]+[P[0][0]])
+
+	distance_to_v = chain.project(Point(v))
+	cut_v_1, cut_v_2 = cut(chain, distance_to_v)
+
+	distance_to_w = cut_v_2.project(Point(w))
+	right_chain, remaining = cut(cut_v_2, distance_to_w)
+
+	p_l = cut_v_1.coords[:]+remaining.coords[:-1]
+	p_r = right_chain.coords[:]
+
+#	print p_l, p_r
+	return p_l, p_r
+
+def cut(line, distance):
+    # Cuts a line in two at a distance from its starting point
+    if distance <= 0.0 or distance >= line.length:
+        return [LineString(line)]
+    coords = list(line.coords)
+    for i, p in enumerate(coords):
+        pd = line.project(Point(p))
+        if pd == distance:
+            return [
+                LineString(coords[:i+1]),
+                LineString(coords[i:])]
+        if pd > distance:
+            cp = line.interpolate(distance)
+            return [
+                LineString(coords[:i] + [(cp.x, cp.y)]),
+                LineString([(cp.x, cp.y)] + coords[i:])]
 
 
 if __name__ == "__main__":
@@ -527,29 +662,31 @@ if __name__ == "__main__":
 
 	ext = [(0,0),
 			(3,0),
-			(4,1),
+			(4,4),
 			(5,0),
 			(8,0),
 			(8,5),
 			(0,5)]
 
-	holes = [[(2.5,0.5),
-			 (1,0.5),
-			 (1,3),
-			 (2.5,3)],
-			 [(6,3),
-			 (6,4),
-			 (7,4),
-			 (7,3)],
-			 [(3,3.5),
-			 (3,4),
-			 (5,4),
-			 (5,3.5)]]
+	holes = []
+#	holes = [[(2.5,0.5),
+#			 (1,0.5),
+#			 (1,3),
+#			 (2.5,3)],
+#			 [(6,3),
+#			 (6,4),
+#			 (7,4),
+#			 (7,3)],
+#			 [(3,3.5),
+#			 (3,4),
+#			 (5,4),
+#			 (5,3.5)]]
 
 
-	print("Altitude is: %f"%get_altitude([ext, holes], 0))
+	print("Altitude is: %f"%get_altitude([ext, holes], pi/2))
 	#print find_reflex_vertices([ext, holes])
-	print find_cut_space([ext,holes], find_reflex_vertices([ext, holes])[0])
+	#print find_cut_space([ext,holes], find_reflex_vertices([ext, holes])[0])
+	find_optimal_cut([ext, holes], (4,4))
 	#find_cone_of_bisection([ext, holes], (4,1))
 	#print get_directions([ext, holes])
 	#print("Transition point: %s"%(find_transition_point([(0,1),(0,10)], 0, (8,6)),))
