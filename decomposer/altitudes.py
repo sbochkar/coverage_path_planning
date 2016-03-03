@@ -3,7 +3,9 @@ from math import cos
 from math import sin
 from math import pi
 from math import atan2
+from math import degrees
 from operator import itemgetter
+import shapely
 from shapely.geometry import LineString
 from shapely.geometry import Polygon
 import numpy as np
@@ -327,6 +329,70 @@ def get_directions(P):
 	return dirs
 
 
+def find_cone_of_bisection(P, v):
+	"""
+	Return a polygon representing the cone of bisection
+	"""
+	rad = 6
+
+	ext = P[0]
+	holes = P[1]
+
+
+	sh_poly = Polygon(ext,holes)
+
+	# Form an adjacency list
+	adjacency_dict = {}
+
+	n = len(ext)
+	for i in range(n):
+		adjacency_dict[ext[i]] = [ext[(i+1)%n], ext[(i-1)%n]]
+
+	for hole in holes:
+		n = len(hole)
+		for i in range(n):
+			adjacency_dict[hole[i]] = [hole[(i+1)%n], hole[(i-1)%n]]
+
+	#Find adjacent edges of v
+	v1 = adjacency_dict[v][0]
+	v2 = adjacency_dict[v][1]
+	triangle = [v2,v,v1]
+
+	# Find the sweeping angle of the arc
+	a0 = atan2(v[1]-v2[1],v[0]-v2[0])
+	a1 = atan2(v1[1]-v[1],v1[0]-v[0])
+	angle = a1-a0
+	if angle < 0:
+		angle += 2*pi
+	angle = 2*pi-angle
+
+	# Find the center angle of the arc
+	orient = (a0+(pi/2-a1))/2
+	p = []
+
+	p.append(v)
+	import numpy as np
+	for i in np.arange(orient-angle/2,orient+angle/2,0.1):
+		x = rad*cos(i)
+		y = rad*sin(i)
+
+		new_x = v[0]+x
+		new_y = v[1]+y
+
+		p.append((new_x, new_y))
+
+	x = rad*cos(orient+angle/2)
+	y = rad*sin(orient+angle/2)
+
+	new_x = v[0]+x
+	new_y = v[1]+y
+
+	p.append((new_x, new_y))
+
+
+	return p
+
+
 def find_cut_space(P, v):
 	"""
 	Generate the cut space at v using Visilibity library.
@@ -334,50 +400,92 @@ def find_cut_space(P, v):
 
 
 	epsilon = 0.0000001
-	wall_points = []
-	for point in P[0]:
-		wall_points.append(vis.Point(*point))
 
-	walls = vis.Polygon(wall_points)
-	#print walls.is_in_standard_form()
 
-	holes = []
-	for hole_list in P[1]:
-		hole_points = []
-		for point in hole_list:
-			hole_points.append(vis.Point(*point))
+	# Using shapely library, compute the cone of bisection
+	shp_polygon = shapely.geometry.polygon.orient(Polygon(*P))
+	shp_cone 	= shapely.geometry.polygon.orient(Polygon(find_cone_of_bisection(P, v)))
 
-		holes.append(vis.Polygon(hole_points))
-		#print hole.is_in_standard_form()
+	shp_intersection = shapely.geometry.polygon.orient(shp_cone.intersection(shp_polygon))
 
-	if len(holes)>0:
-		env = vis.Environment([walls, holes])
-	else:
-		env = vis.Environment([walls])
-	#print env.is_valid(epsilon)
-
+	#Using the visilibity library, define the reflex vertex
 	observer = vis.Point(*v)
+
+	# Define the walls of intersection in Visilibity domain
+	# To put into standard form, do this
+	exterior_coords = shp_intersection.exterior.coords[:-1]
+	x_min_idx, x_min = min(enumerate(exterior_coords), key=itemgetter(1))
+	exterior_coords = exterior_coords[7:]+exterior_coords[:7]
+
+	vis_intersection_wall_points = []
+	for point in exterior_coords:
+		vis_intersection_wall_points.append(vis.Point(*point))
+	#print 'Walls in standard form : ',vis.Polygon(vis_intersection_wall_points).is_in_standard_form()
+
+	#for i in range(len(vis_intersection_wall_points)):
+		#print vis_intersection_wall_points[i].x(), vis_intersection_wall_points[i].y()
+		#print point.x(), point.y()
+
+	# Define the holes of intersection in Visilibity domain
+	vis_intersection_holes = []
+	for interior in shp_intersection.interiors:
+		vis_intersection_hole_points = []
+		for point in list(interior.coords):
+			vis_intersection_hole_points.append(vis.Point(*point))
+
+		vis_intersection_holes.append(vis_intersection_hole_points)
+		#print 'Hole in standard form : ',vis.Polygon(vis_intersection_hole_points).is_in_standard_form()
+
+	# Construct a convinient list
+	env = []
+	env.append(vis.Polygon(vis_intersection_wall_points))
+	for hole in vis_intersection_holes:
+		env.append(vis.Polygon(hole))
+
+	# Construct the whole envrionemt in Visilibity domain
+	env = vis.Environment(env)
+
+	# Construct the visible polygon
 	observer.snap_to_boundary_of(env, epsilon)
 	observer.snap_to_vertices_of(env, epsilon)
-	isovist = vis.Visibility_Polygon(observer, env, epsilon)
+
+	vis_free_space = vis.Visibility_Polygon(observer, env, epsilon)
+	#print vis_free_space.n()
 
 	def save_print(polygon):
-		end_pos_x = []
-		end_pos_y = []
-		for i in range(polygon.n()):
-			x = polygon[i].x()
-			y = polygon[i].y()
+	    end_pos_x = []
+	    end_pos_y = []
+	    for i in range(polygon.n()):
+	        x = polygon[i].x()
+	        y = polygon[i].y()
+	        
+	        end_pos_x.append(x)
+	        end_pos_y.append(y)
+	                
+	    return end_pos_x, end_pos_y 
+	point_x , point_y  = save_print(vis_free_space)
+	point_x.append(vis_free_space[0].x())
+	point_y.append(vis_free_space[0].y())  
 
-			end_pos_x.append(x)
-			end_pos_y.append(y)
 
-		return end_pos_x, end_pos_y 
+	# PLOTTING
+	import pylab as p
 
-	point_x , point_y  = save_print(isovist)
-	point_x.append(isovist[0].x())
-	point_y.append(isovist[0].y())  
+	# plot the intersection of the cone with the polygon
+	intersection_x, intersection_y = shp_intersection.exterior.xy
+	p.plot(intersection_x, intersection_y)
 
-	print zip(point_x, point_y)
+	for interior in shp_intersection.interiors:
+		interior_x, interior_y = interior.xy
+		p.plot(interior_x, interior_y)
+
+	# Plot the reflex vertex
+	p.plot([observer.x()], [observer.y()], 'go')
+
+	p.plot(point_x, point_y)
+
+	p.show()
+
 
 if __name__ == "__main__":
 
@@ -425,12 +533,24 @@ if __name__ == "__main__":
 			(8,5),
 			(0,5)]
 
-	holes = []
+	holes = [[(2.5,0.5),
+			 (1,0.5),
+			 (1,3),
+			 (2.5,3)],
+			 [(6,3),
+			 (6,4),
+			 (7,4),
+			 (7,3)],
+			 [(3,3.5),
+			 (3,4),
+			 (5,4),
+			 (5,3.5)]]
 
 
 	print("Altitude is: %f"%get_altitude([ext, holes], 0))
-	print find_reflex_vertices([ext, holes])
+	#print find_reflex_vertices([ext, holes])
 	print find_cut_space([ext,holes], find_reflex_vertices([ext, holes])[0])
+	#find_cone_of_bisection([ext, holes], (4,1))
 	#print get_directions([ext, holes])
 	#print("Transition point: %s"%(find_transition_point([(0,1),(0,10)], 0, (8,6)),))
 	#print("Transition point: %s"%(find_best_transition_point([(0,1),(0,10)], (8,6), 0, 0),))
