@@ -59,14 +59,16 @@ def coverage_path_planner(map_poly, method, specs):
 		print("[%18s] Using %s method."%(tk.current_time(), method))
 
 		print("[%18s] Invoking greedy decomposition."%tk.current_time())
-		cvx_set, connectivity, shared_edges = dec.greedy_decompose(map_poly)
+		#cvx_set, connectivity, shared_edges = dec.greedy_decompose(map_poly)
+		cvx_set, connectivity, shared_edges = dec.min_alt_decompose(map_poly)
 		print("[%18s] Finished greedy decomposition."%tk.current_time())
-		print cvx_set
-		print connectivity
-		print shared_edges
+		#print cvx_set
+		#print connectivity
+		#print shared_edges
 		print("[%18s] Startint to sample the free space with lines."%tk.current_time())
-		lines = lsmpl.ilp_finite_dir_line_sampling(cvx_set, connectivity, shared_edges, [0, math.pi/2], specs)
-
+		lines = lsmpl.min_alt_sampling(cvx_set, specs)
+		#lines = lsmpl.ilp_finite_dir_line_sampling(cvx_set, connectivity, shared_edges, [0, math.pi/2], specs)
+		print lines
 		#print lines[0][0][0]
 		#temp = lines[0][0][0]
 		#lines[0][0][0] = lines[0][0][1]

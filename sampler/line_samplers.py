@@ -15,6 +15,30 @@ except ImportError: print("Importing modules failed!")
 MAX_COST = 10000
 
 
+
+def min_alt_sampling(D, specs):
+	"""
+	Sample each polygon in D with lines in min altitude direciton
+	"""
+	import os, sys
+	sys.path.insert(0, "../decomposer")
+	import altitudes as alt
+
+	radius = specs["radius"]
+
+	line_storage = []
+
+	for poly in D:
+		print poly
+		a, theta = alt.get_min_altitude([poly, []])
+
+		line_set, raw_line_set =  sample_with_lines(poly, theta, radius)
+		
+		line_storage.append(line_set)
+
+	return line_storage
+
+
 def ilp_finite_dir_line_sampling(cvx_set, connectivity, shared_edges, dir_set, specs):
 	"""
 	This function samples all of free space with lines.

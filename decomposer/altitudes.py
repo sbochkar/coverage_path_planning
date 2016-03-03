@@ -157,6 +157,24 @@ def get_altitude(P, theta):
 	return altitude
 
 
+def get_min_altitude(P):
+	"""
+	Function perofrm a series of call to get_altitude, to find the min altitude
+	"""
+
+	dirs = get_directions(P)
+
+	min_alt = 1000000000
+	min_dir = 0
+	for dir in dirs:
+		test_alt = get_altitude(P, dir)
+		if test_alt < min_alt:
+			min_alt = test_alt
+			min_dir = dir
+
+	return test_alt, dir
+
+
 def find_reflex_vertices(P):
 	"""
 	Return a list of reflex vertices in P
@@ -486,25 +504,44 @@ def find_cut_space(P, v):
 
 	shp_visib = shapely.geometry.polygon.orient(Polygon(zip(point_x, point_y)),-1)
 	shp_ls_visib = LineString(shp_visib.exterior.coords[:])
-	shp_pl_visib = shp_ls_visib.buffer(0.01)
+	shp_pl_visib = shp_ls_visib.buffer(0.001)
 
 	shp_ls_exterior = LineString(shp_polygon.exterior)
 	shp_ls_interior = []
 	for interior in shp_polygon.interiors:
 	 	shp_ls_interior.append(LineString(interior))
 
-	#print shp_ls_exterior
-	#print shp_ls_visib
 	# Start adding cut space on the exterior
 	cut_space = []
+	common_items = []
 	#common_items = shp_ls_exterior.intersection(shp_ls_visib)
 	common_items = shp_ls_exterior.intersection(shp_pl_visib)
-	print common_items
+
+	# Filter out very small segments
 	if common_items.geom_type == "MultiLineString":
 		for item in common_items:
-			if item.geom_type == "LineString":
-				cut_space.append(item.coords[:])
-	print cut_space
+			linestring = item.coords[:]
+
+			# Examine each edge of the linestring
+			for i in range(len(linestring)-1):
+				edge = linestring[i:i+2]
+				edge_ls = LineString(edge)
+
+				if edge_ls.length > 0.02:
+					cut_space.append(edge)
+
+	elif common_items.geom_type == "LineString":
+
+		# Examine each edge of the linestring
+		linestring = common_items.coords[:]
+		for i in range(len(linestring)-1):
+			edge = linestring[i:i+2]
+			edge_ls = LineString(edge)
+
+			if edge_ls.length > 0.02:
+				cut_space.append(edge)
+
+	#print cut_space
 
 	# Start adding cut space on the holes
 	for interior in shp_polygon.interiors:
@@ -525,7 +562,7 @@ def find_cut_space(P, v):
 
 	# Plot the polygon itself
 	x, y = shp_polygon.exterior.xy
-	#p.plot(x, y)
+	p.plot(x, y)
 
 	# plot the intersection of the cone with the polygon
 	intersection_x, intersection_y = shp_intersection.exterior.xy
@@ -538,9 +575,9 @@ def find_cut_space(P, v):
 	# Plot the reflex vertex
 	p.plot([observer.x()], [observer.y()], 'go')
 
-	#p.plot(point_x, point_y)
+	p.plot(point_x, point_y)
 
-	p.show()
+	#p.show()
 	#print cut_space
 	return cut_space
 
@@ -555,11 +592,10 @@ def find_optimal_cut(P, v):
 	dirs_right = []
 	pois = []
 
-	# Get altitude of P TODO NEED TO IMPLEMENT MINIMUM ALTITUDE
-	a = get_altitude(P, pi/2)
+	a, theta = get_min_altitude(P)
 
 	s = find_cut_space(P, v)
-	print s
+	#print s
 	min_altitude = a
 	min_altitude_idx = None
 
@@ -600,7 +636,7 @@ def find_optimal_cut(P, v):
 
 
 	#print min_altitude, min_altitude_idx[0], degrees(min_altitude_idx[1]), degrees(min_altitude_idx[2])
-	return min_altitude_idx
+	return min_altitude, min_altitude_idx
 
 
 def perform_cut(P, e):
@@ -662,7 +698,8 @@ if __name__ == "__main__":
 	print("Altitude is: %f"%get_altitude([ext, holes], pi/2))
 	#print find_reflex_vertices([ext, holes])
 	#print find_cut_space([ext,holes], find_reflex_vertices([ext, holes])[0])
-	find_optimal_cut([ext, holes], (5,1))
+	alt, (pt, dir1, dir2) = find_optimal_cut([ext, holes], (5,1))
+	print alt, pt, degrees(dir1), degrees(dir2)
 	#find_cone_of_bisection([ext, holes], (4,1))
 	#print get_directions([ext, holes])
 	#print("Transition point: %s"%(find_transition_point([(0,1),(0,10)], 0, (8,6)),))

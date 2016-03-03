@@ -1,6 +1,6 @@
 from py2d.Math import Polygon
 import altitudes as alt
-
+from shapely.geometry import LineString
 
 def min_alt_decompose(map_poly):
 
@@ -36,25 +36,109 @@ def min_alt_decompose(map_poly):
 
 		# Find optimal cut
 		cut = alt.find_optimal_cut(poly, v)
-
 		# If best cut did not improve
 		if cut is None:
 			continue
 
 		# If cut was made to reflex vertex, remove it from the list
-		if cut[0] in R:
+		if cut[1] in R:
 			R.remove(cut[0])
 
 		#print cut
-		p_l, p_r = alt.perform_cut(poly,[v,cut[0]])
+		p_l, p_r = alt.perform_cut(poly,[v,cut[1]])
 		D.remove(poly)
 		D.append([p_l, []])
 		D.append([p_r, []])
 		#print D
 
-	print cut
 
-	print None
+	# Start generating additional data structures for passing to the coverage
+	# planner
+	cvx_set = [poly[0] for poly in D]
+
+	connectivity = [[0 for i in range(len(cvx_set))] for i in range(len(cvx_set))]
+	shared_edges = [[None for i in range(len(cvx_set))] for i in range(len(cvx_set))]
+
+	for p_1 in range(len(cvx_set)):
+		for p_2 in range(p_1+1, len(cvx_set)):
+
+			# p_1 one polygon
+			# p_2 second polygon
+			# Test each edge on each polygon looking for overlaping edges
+			n_1 = len(cvx_set[p_1])
+			n_2 = len(cvx_set[p_2])
+			for i in range(n_1):
+				edge_1 = [cvx_set[p_1][i]]+[cvx_set[p_1][(i+1)%n_1]]
+				for j in range(n_2):
+					edge_2 = [cvx_set[p_2][j]]+[cvx_set[p_2][(j+1)%n_2]]
+
+					def check_overlap(edge1, edge2):
+						# imrpoved version of the comparison where
+						# edges may overlap but not along entire length
+
+						ls_edge1 = LineString(edge1).buffer(0.0001)
+						ls_edge2 = LineString(edge2)
+
+						isection = ls_edge1.intersection(ls_edge2)
+						if isection.geom_type == "LineString":
+							if isection.length > 0.001:
+								#print isection
+								coords = isection.coords[:]
+								return True, coords
+							else:
+								return False, None
+						else:
+							return False, None
+#	
+					is_overlap, coords = check_overlap(edge_1, edge_2)
+					if is_overlap:
+						connectivity[p_1][p_2] = 1
+						connectivity[p_2][p_1] = 1
+
+						shared_edges[p_1][p_2] = coords
+						shared_edges[p_2][p_1] = coords
+
+	#print shared_edges
+#	prtty_print_set_polygon(cvx_set)
+#	prtty_print_connectivity(connectivity)
+#	prtty_print_shared_edges(shared_edges)
+	return cvx_set, connectivity, shared_edges
+
+
+def prtty_print_shared_edges(M):
+
+	for i in range(len(M)):
+		line_list = []
+		print("["),
+		for j in range(len(M[0])):
+			if M[i][j] is not None:
+				line_list.append(M[i][j])
+				print("%d"%(len(line_list)-1)),
+			else:
+				print("N"),
+
+		print("]"),
+		for k in range(len(line_list)):
+			print("%d: %s; "%(k, line_list[k])),
+		print("")
+
+
+
+			
+
+def prtty_print_connectivity(M):
+
+	for i in range(len(M)):
+		print("%s"%M[i])
+
+
+def prtty_print_set_polygon(poly_list):
+
+	i = 0
+	for poly in poly_list:
+		print("Polygon %d: %s"%(i, poly))
+		i += 1
+
 
 def greedy_decompose(map_poly):
 	"""
