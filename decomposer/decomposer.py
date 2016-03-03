@@ -1,4 +1,60 @@
 from py2d.Math import Polygon
+import altitudes as alt
+
+
+def min_alt_decompose(map_poly):
+
+	ext = [(0.0,0.0),
+			(4.0,0.0),
+			(5.0,1.0),
+			(6.0,0.0),
+			(10.0,0.0),
+			(10.0,10.0),
+			(6.0,10.0),
+			(4.0,7.0),
+			(5.0,10.0),
+			(0.0,10.0)]
+
+	holes = []
+	P = [ext, holes]
+
+	# Find all reflex vertices in P
+	R = alt.find_reflex_vertices(P)
+	#print R
+	D = [P]
+
+	#Cuts at all reflex vertices
+	for v in R:
+		for poly in D:
+			if v in poly[0]:
+				#print poly
+				break
+			else:
+				for hole in poly[1]:
+					if v in hole:
+						break
+
+		# Find optimal cut
+		cut = alt.find_optimal_cut(poly, v)
+
+		# If best cut did not improve
+		if cut is None:
+			continue
+
+		# If cut was made to reflex vertex, remove it from the list
+		if cut[0] in R:
+			R.remove(cut[0])
+
+		#print cut
+		p_l, p_r = alt.perform_cut(poly,[v,cut[0]])
+		D.remove(poly)
+		D.append([p_l, []])
+		D.append([p_r, []])
+		#print D
+
+	print cut
+
+	print None
 
 def greedy_decompose(map_poly):
 	"""
@@ -324,4 +380,5 @@ if __name__ == "__main__":
 
 	map_poly = [poly, holes]
 
-	greedy_decompose(map_poly)
+	#greedy_decompose(map_poly)
+	min_alt_decompose(1)

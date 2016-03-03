@@ -4,10 +4,12 @@ from math import sin
 from math import pi
 from math import atan2
 from math import degrees
+from math import sqrt
 from operator import itemgetter
 import shapely
 from shapely.geometry import Point
 from shapely.geometry import LineString
+from shapely.geometry import LinearRing
 from shapely.geometry import Polygon
 import numpy as np
 import visilibity as vis
@@ -334,12 +336,16 @@ def find_cone_of_bisection(P, v):
 	"""
 	Return a polygon representing the cone of bisection
 	"""
-	rad = 20
+
+	# Compute an approximationg to the radius of the cone of bisection
+	shp_polygon = Polygon(P[0], P[1])
+	min_x, min_y, max_x, max_y = shp_polygon.bounds
+	rad = sqrt((max_x-min_x)**2+(max_y-min_y)**2)
 
 	ext = P[0]
 	holes = P[1]
 
-	# Form an adjacency list
+	# Form an adjacency list for easy access to adjacent edges
 	adjacency_dict = {}
 
 	n = len(ext)
@@ -352,33 +358,34 @@ def find_cone_of_bisection(P, v):
 			adjacency_dict[hole[i]] = [hole[(i+1)%n], hole[(i-1)%n]]
 
 	#Find adjacent edges of v
-	v1 = adjacency_dict[v][0]
-	v2 = adjacency_dict[v][1]
-	triangle = [v2,v,v1]
+	v_l = adjacency_dict[v][1]
+	v_r = adjacency_dict[v][0]
 
-	#print triangle
+	# Find the angle of v_l with the x-axis
+	theta_l = atan2(v_l[1]-v[1], v_l[0]-v[0])
+	theta_r = atan2(v_r[1]-v[1], v_r[0]-v[0])
+	#print degrees(theta_l), degrees(theta_r)
 
-	# Find the sweeping angle of the arc
-	a0 = atan2(v[1]-v2[1],v[0]-v2[0])
-	a1 = atan2(v1[1]-v[1],v1[0]-v[0])
+	# Consider several cases which will determine the measurement for the cone of bisection
+	if theta_l < 0 and theta_r < 0:
+		angle = abs(theta_l-theta_r)
+		orientation = abs(theta_r)+angle/2
+	elif theta_l < 0 and theta_r > 0:
+		angle = theta_r-theta_l
+		orientation = pi+theta_l+angle/2
+	elif theta_l > 0 and theta_r > 0:
+		angle = theta_r-theta_l
+		orientation = pi+theta_l+angle/2
+	elif theta_l > 0 and theta_r < 0:
+		angle = 2*pi-(theta_l-theta_r)
+		orientation = pi+theta_l+angle/2
 
-	
-	angle = abs(a1-a0)
-	#if angle < 0:
-	#	angle += 2*pi
-	angle = pi-angle
-
-	#print degrees(a0), degrees(a1)
-	#print("Arc.ang: %f"%(180-abs(degrees(a1-a0))))
-	# Find the center angle of the arc
-	#orient = (a0+(pi/2-a1))/2
-	orient = pi-(angle/2+abs(a1))
-
+	#print("Angle: %f, Orientation: %f"%(degrees(angle),degrees(orientation)))
 	p = []
 
 	p.append(v)
 	import numpy as np
-	for i in np.arange(orient-angle/2,orient+angle/2,0.1):
+	for i in np.arange(orientation-angle/2,orientation+angle/2,0.1):
 		x = rad*cos(i)
 		y = rad*sin(i)
 
@@ -387,14 +394,13 @@ def find_cone_of_bisection(P, v):
 
 		p.append((new_x, new_y))
 
-	x = rad*cos(orient+angle/2)
-	y = rad*sin(orient+angle/2)
+	x = rad*cos(orientation+angle/2)
+	y = rad*sin(orientation+angle/2)
 
 	new_x = v[0]+x
 	new_y = v[1]+y
 
 	p.append((new_x, new_y))
-
 
 	return p
 
@@ -406,7 +412,6 @@ def find_cut_space(P, v):
 
 
 	epsilon = 0.0000001
-
 
 	# Using shapely library, compute the cone of bisection
 	shp_polygon = shapely.geometry.polygon.orient(Polygon(*P))
@@ -481,19 +486,25 @@ def find_cut_space(P, v):
 
 	shp_visib = shapely.geometry.polygon.orient(Polygon(zip(point_x, point_y)),-1)
 	shp_ls_visib = LineString(shp_visib.exterior.coords[:])
+	shp_pl_visib = shp_ls_visib.buffer(0.01)
 
 	shp_ls_exterior = LineString(shp_polygon.exterior)
 	shp_ls_interior = []
 	for interior in shp_polygon.interiors:
 	 	shp_ls_interior.append(LineString(interior))
 
+	#print shp_ls_exterior
+	#print shp_ls_visib
 	# Start adding cut space on the exterior
 	cut_space = []
-	common_items = shp_ls_exterior.intersection(shp_ls_visib)
-	for item in common_items:
-		if item.geom_type == "LineString":
-			cut_space.append(item.coords[:])
-
+	#common_items = shp_ls_exterior.intersection(shp_ls_visib)
+	common_items = shp_ls_exterior.intersection(shp_pl_visib)
+	print common_items
+	if common_items.geom_type == "MultiLineString":
+		for item in common_items:
+			if item.geom_type == "LineString":
+				cut_space.append(item.coords[:])
+	print cut_space
 
 	# Start adding cut space on the holes
 	for interior in shp_polygon.interiors:
@@ -507,14 +518,14 @@ def find_cut_space(P, v):
 			cut_space.append(common_items.coords[:])
 		#Point, LineString, GeometryCollection
 
-	print cut_space
+	#print cut_space
 
 	# PLOTTING
 	import pylab as p
 
 	# Plot the polygon itself
 	x, y = shp_polygon.exterior.xy
-	p.plot(x, y)
+	#p.plot(x, y)
 
 	# plot the intersection of the cone with the polygon
 	intersection_x, intersection_y = shp_intersection.exterior.xy
@@ -527,9 +538,10 @@ def find_cut_space(P, v):
 	# Plot the reflex vertex
 	p.plot([observer.x()], [observer.y()], 'go')
 
-	p.plot(point_x, point_y)
+	#p.plot(point_x, point_y)
 
 	p.show()
+	#print cut_space
 	return cut_space
 
 
@@ -543,43 +555,52 @@ def find_optimal_cut(P, v):
 	dirs_right = []
 	pois = []
 
-	# Get altitude of P
+	# Get altitude of P TODO NEED TO IMPLEMENT MINIMUM ALTITUDE
 	a = get_altitude(P, pi/2)
 
 	s = find_cut_space(P, v)
-	cut_point = s[0][1]
-
-	p_l, p_r = perform_cut(P, [v, cut_point])
-
-	dirs_left = get_directions([p_l, []])
-	dirs_right = get_directions([p_r, []])
-	#print dirs_left
-	#print list(degrees(dir) for dir in dirs_left)
-
-	#print get_altitude([p_l,[]], 3.5598169831690223)
-	#print get_altitude([p_r,[]], 0)
+	print s
+	min_altitude = a
+	min_altitude_idx = None
 
 	for si in s:
+		# Process each edge si, have to be cw
+		lr_si = LinearRing([v]+si)
+		if lr_si.is_ccw:
+			si = [si[1]]+[si[0]]
+
+		cut_point = si[0]
+
+		p_l, p_r = perform_cut(P, [v, cut_point])
+		#print p_l, p_r
+
+		dirs_left = get_directions([p_l, []])
+		dirs_right = get_directions([p_r, []])
+		#print dirs_left
+		#print list(degrees(dir) for dir in dirs_left)
+		#print get_altitude([p_l,[]], 3.5598169831690223)
+		#print get_altitude([p_r,[]], 0)
+
+		# Look for all transition points
 		for dir1 in dirs_left:
 			for dir2 in dirs_right:
 				tp = find_best_transition_point(si, v, dir1, dir2)
 				pois.append((tp, dir1, dir2))
 
 	# Evaluate all transition points
-	min_cost = a;
-	min_cost_idx = -1;
 	for case in pois:
 		p_l, p_r = perform_cut(P, [v, case[0]])
 
 		a_l = get_altitude([p_l, []], case[1])
 		a_r = get_altitude([p_r, []], case[2])
 		#print a_l, a_r
-		if a_l+a_r<=min_cost:
-			min_cost = a_l+a_r
-			min_cost_idx = case
+		if a_l+a_r<=min_altitude:
+			min_altitude = a_l+a_r
+			min_altitude_idx = case
 
-	print min_cost, min_cost_idx
 
+	#print min_altitude, min_altitude_idx[0], degrees(min_altitude_idx[1]), degrees(min_altitude_idx[2])
+	return min_altitude_idx
 
 
 def perform_cut(P, e):
@@ -604,6 +625,7 @@ def perform_cut(P, e):
 #	print p_l, p_r
 	return p_l, p_r
 
+
 def cut(line, distance):
     # Cuts a line in two at a distance from its starting point
     if distance <= 0.0 or distance >= line.length:
@@ -624,69 +646,23 @@ def cut(line, distance):
 
 if __name__ == "__main__":
 
-#	ext = [(0, 0),
-#			(12, 0),
-#			(12, 20),
-#			(0, 20)]
-#
-#	holes = [[(1, 1),
-#			(2, 1),
-#			(2, 2),
-#			(1, 2)],
-#			[(8,8),
-#			(9, 8),
-#			(9, 9),
-#			(8, 9)]]
-
-#	ext = [(0, 0),
-#		(10, 0),
-#		(10, 10),
-#		(0, 10),
-#		(2, 5)]
-#
-#	# Make sure holes are cw.
-#	holes = [[(3,2),
-#			  (3,4),
-#			  (5,4),
-#			  (4,3),
-#			  (5,2)]]
-
-#	ext = [(0,0),
-#			(10,0),
-#			(10,1),
-#			(8,6),
-#			(5,5),
-#			(0,1)]
-#
-#	holes = []
-
 	ext = [(0,0),
-			(3,0),
-			(4,4),
-			(5,0),
-			(8,0),
-			(8,5),
-			(0,5)]
+			(4,0),
+			(5,1),
+			(6,0),
+			(10,0),
+			(10,10),
+			(6,10),
+			(4,7),
+			(5,10),
+			(0,10)]
 
 	holes = []
-#	holes = [[(2.5,0.5),
-#			 (1,0.5),
-#			 (1,3),
-#			 (2.5,3)],
-#			 [(6,3),
-#			 (6,4),
-#			 (7,4),
-#			 (7,3)],
-#			 [(3,3.5),
-#			 (3,4),
-#			 (5,4),
-#			 (5,3.5)]]
-
 
 	print("Altitude is: %f"%get_altitude([ext, holes], pi/2))
 	#print find_reflex_vertices([ext, holes])
 	#print find_cut_space([ext,holes], find_reflex_vertices([ext, holes])[0])
-	find_optimal_cut([ext, holes], (4,4))
+	find_optimal_cut([ext, holes], (5,1))
 	#find_cone_of_bisection([ext, holes], (4,1))
 	#print get_directions([ext, holes])
 	#print("Transition point: %s"%(find_transition_point([(0,1),(0,10)], 0, (8,6)),))
