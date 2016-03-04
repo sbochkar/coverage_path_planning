@@ -102,6 +102,7 @@ def get_altitude(P, theta):
 	holes = []
 
 	ext = rotate(ext_orig, -theta)
+	#print ext
 	for hole in holes_orig:
 		holes.append(rotate(hole, -theta))
 
@@ -117,11 +118,13 @@ def get_altitude(P, theta):
 	repeated_event_keys = []
 
 	# Go through each vertex and increment altitude accordingly
-	prev_x = 0
+	prev_x = -10000000
 	checked_verts = []
+	#print verts_sorted_by_x
 	for i in range(len(verts_sorted_by_x)):
 			
 		v = verts_sorted_by_x[i]
+		#print("%d, %5f, %s)"%(active_event_counter, altitude,v))
 
 		if v in checked_verts:
 			continue
@@ -134,7 +137,7 @@ def get_altitude(P, theta):
 		if i>0:
 			deltax = x_v-prev_x
 			altitude += active_event_counter*deltax
-			prev_x = x_v
+		prev_x = x_v
 
 		# Handle the easy clear cut cases here
 		if (x_adj_1 > x_v) and (x_adj_2 > x_v):
@@ -661,14 +664,12 @@ def find_optimal_cut(P, v):
 	# Evaluate all transition points
 	for case in pois:
 		p_l, p_r = perform_cut(P, [v, case[0]])
-		#print p_l
 		a_l = get_altitude([p_l, []], case[1])
 		a_r = get_altitude([p_r, []], case[2])
-		print a_l, a_r
 		if a_l+a_r<=min_altitude:
 			min_altitude = a_l+a_r
 			min_altitude_idx = case
-
+		
 
 	#print min_altitude, min_altitude_idx[0], degrees(min_altitude_idx[1]), degrees(min_altitude_idx[2])
 	return min_altitude, min_altitude_idx
@@ -717,17 +718,18 @@ def cut(line, distance):
 
 if __name__ == "__main__":
 
-#	ext = [(0.0, 0.0),
-#			(4.0, 0.0),
-#			(5.0, 1.0),
-#			(6.0, 0.0),
-#			(10.0, 0.0),
-#			(10.0, 10.0),
-#			(6.0, 10.0),
-#			(5.0, 9.0),
-#			(4.0, 10.0),
-#			(0.0, 10.0)]
+	ext = [(0.0, 0.0),
+			(4.0, 0.0),
+			(5.0, 1.0),
+			(6.0, 0.0),
+			(10.0, 0.0),
+			(10.0, 10.0),
+			(6.0, 10.0),
+			(5.0, 9.0),
+			(4.0, 10.0),
+			(0.0, 10.0)]
 
+	holes = []
 #	ext = [(0,0),
 #			(4,0),
 #			(4,1),
@@ -741,32 +743,31 @@ if __name__ == "__main__":
 #			(4,10),
 #			(0,10)]
 
-	ext = [(0,0),
-			(10,0),
-			(10,10),
-			(0,10),
-			(0,6),
-			(1,6),
-			(1,4),
-			(0,4)]
+#	ext = [(0,0),
+#			(10,0),
+#			(10,10),
+#			(0,10),
+#			(0,6),
+#			(1,6),
+#			(1,4),
+#			(0,4)]
+#
+#	holes = [[(3,1),
+#			(3,2),
+#			(4,2),
+#			(4,3),
+#			(3,3),
+#			(3,4),
+#			(6,4),
+#			(6,3),
+#			(5,3),
+#			(5,2),
+#			(6,2),
+#			(5,1)]]
 
-	holes = [[(3,1),
-			(3,2),
-			(4,2),
-			(4,3),
-			(3,3),
-			(3,4),
-			(6,4),
-			(6,3),
-			(5,3),
-			(5,2),
-			(6,2),
-			(5,1)]]
-
-	print("Altitude is: %f"%get_altitude([ext, holes], 0))
-	#print find_reflex_vertices([ext, holes])
+#	print("Altitude is: %f"%get_altitude([ext, holes], 3*pi/2))
 	#print find_cut_space([ext,holes], find_reflex_vertices([ext, holes])[0])
-	#alt, (pt, dir1, dir2) = find_optimal_cut([ext, holes], (5,1))
+	alt, (pt, dir1, dir2) = find_optimal_cut([ext, holes], (5,1))
 	#print alt, pt, degrees(dir1), degrees(dir2)
 	#find_cone_of_bisection([ext, holes], (4,1))
 	#print get_directions([ext, holes])
