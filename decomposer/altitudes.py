@@ -202,13 +202,14 @@ def get_min_altitude(P):
 
 	min_alt = 1000000000
 	min_dir = 0
-	for dir in dirs:
-		test_alt = get_altitude(P, dir)
-		if test_alt < min_alt:
+	for theta in dirs:
+		test_alt = get_altitude(P, theta)
+		if test_alt <= min_alt:
 			min_alt = test_alt
-			min_dir = dir
+			min_dir = theta
 
-	return test_alt, dir
+	#print min_alt, min_dir
+	return min_alt, min_dir
 
 
 def find_reflex_vertices(P):
@@ -422,11 +423,14 @@ def find_cone_of_bisection(P, v):
 	#print degrees(theta_l), degrees(theta_r)
 
 	# Consider several cases which will determine the measurement for the cone of bisection
-	if theta_l < 0 and theta_r <= 0:
+	#print degrees(theta_l), degrees(theta_r)
+	if theta_l < 0 and theta_r < 0:
 		angle = abs(theta_l-theta_r)
-		orientation = abs(theta_r)+angle/2
-	elif theta_l <= 0 and theta_r > 0:
+		orientation = pi+theta_l+angle/2
+		#print degrees(angle), degrees(orientation)
+	elif theta_l < 0 and theta_r >= 0:
 		angle = theta_r-theta_l
+		#orientation = pi+theta_l+angle/2
 		orientation = pi+theta_l+angle/2
 	elif theta_l > 0 and theta_r > 0:
 		angle = theta_r-theta_l
@@ -599,22 +603,22 @@ def find_cut_space(P, v):
 
 	# Plot the polygon itself
 	x, y = shp_polygon.exterior.xy
-	#p.plot(x, y)
+	p.plot(x, y)
 
 	# plot the intersection of the cone with the polygon
 	intersection_x, intersection_y = shp_intersection.exterior.xy
-	#p.plot(intersection_x, intersection_y)
+	p.plot(intersection_x, intersection_y)
 
 	#for interior in shp_intersection.interiors:
 	#	interior_x, interior_y = interior.xy
 	#	p.plot(interior_x, interior_y)
 
 	# Plot the reflex vertex
-	#p.plot([observer.x()], [observer.y()], 'go')
+	p.plot([observer.x()], [observer.y()], 'go')
 
-	#p.plot(point_x, point_y)
+	p.plot(point_x, point_y)
 
-	#p.show()
+	p.show()
 	#print cut_space
 	return cut_space
 
@@ -647,6 +651,7 @@ def find_optimal_cut(P, v):
 			#print si
 
 		cut_point = si[0]
+		#print P, v, cut_point
 		p_l, p_r = perform_cut(P, [v, cut_point])
 		#print p_l, p_r
 
@@ -688,13 +693,13 @@ def perform_cut(P, e):
 
 	distance_to_v = chain.project(Point(v))
 	distance_to_w = chain.project(Point(w))
-	#print distance_to_v, distance_to_w, e
+#	print distance_to_v, distance_to_w, e
 	if distance_to_w > distance_to_v:
 		if distance_to_v == 0:
 			distance_to_w = chain.project(Point(w))
 			right_chain, remaining = cut(chain, distance_to_w)
 
-			p_l = remaining.coords[:-1]
+			p_l = remaining.coords[:]
 			p_r = right_chain.coords[:]	
 		else:
 			cut_v_1, cut_v_2 = cut(chain, distance_to_v)
@@ -710,17 +715,23 @@ def perform_cut(P, e):
 			distance_to_v = chain.project(Point(v))
 			right_chain, remaining = cut(chain, distance_to_v)
 
-			p_l = remaining.coords[:-1]
+			p_l = remaining.coords[:]
 			p_r = right_chain.coords[:]		
 		else:
+#			print "here"
 			cut_v_1, cut_v_2 = cut(chain, distance_to_w)
+			#print("Cut1: %s"%cut_v_1)
+#			print("Cut2: %s"%cut_v_2)
 
 			distance_to_v = cut_v_2.project(Point(v))
+#			print("Dist: %2f. Length: %2f"%(distance_to_v, cut_v_2.length) )
 			right_chain, remaining = cut(cut_v_2, distance_to_v)
-
+#			print remaining.coords[:]
 			p_l = cut_v_1.coords[:]+remaining.coords[:-1]
 			p_r = right_chain.coords[:]
-
+#			p_l = right_chain.coords[:] 
+#			p_r = remaining.coords[:]+cut_v_1.coords[:]
+#			print p_l, p_r
 	#print p_r
 	return p_l, p_r
 

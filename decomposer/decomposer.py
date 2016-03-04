@@ -65,6 +65,33 @@ def polygon_generator(map_num):
 
 		holes = []
 
+	elif map_num == 5:
+		ext = [(0.0, 0),
+				(10.0, 0),
+				(10.0, 5.0),
+				(7.5, 10.0),
+				(5.0, 5.0),
+				(2.5, 10.0),
+				(0.0, 5.0)]
+
+		holes = []
+
+	elif map_num == 6:
+		ext = [(0.0, 0),
+				(15.0, 0),
+				(15.0, 4.0),
+				(14.0, 5.0),
+				(15.0, 6.0),
+				(15.0, 10.0),
+				(10,10),
+				(10,5),
+				(7.5, 10.0),
+				(5.0, 5.0),
+				(2.5, 10.0),
+				(0.0, 5.0)]
+
+		holes = []
+
 	return [ext, holes]
 
 
@@ -79,7 +106,8 @@ def min_alt_decompose(P):
 	D = [P]
 
 	#Cuts at all reflex vertices
-	for v in R:
+	while R:
+		v = R.pop()
 		for poly in D:
 			if v in poly[0]:
 				#print poly
@@ -89,24 +117,32 @@ def min_alt_decompose(P):
 					if v in hole:
 						break
 
+		# If cut was made previously to a reflex vertex and its cone of bisection
+		# Need to check if it was eliminated here, check later.
+		R_temp = alt.find_reflex_vertices(poly)
+		if v not in R_temp:
+			continue
 		# Find optimal cut
+		#print poly, v
+		print v
+		print "=====>"
 		cut = alt.find_optimal_cut(poly, v)
-		#print cut
+		print cut
 		# If best cut did not improve
 		if cut is None:
+			print "NO"
 			continue
-
-		# If cut was made to reflex vertex, remove it from the list
-		if cut[0] in R:
-			R.remove(cut[0])
-		R.remove(v)
-		print R
+		#print poly, v, cut[0]
 		p_l, p_r = alt.perform_cut(poly,[v,cut[0]])
+		#print "New polygons"
+		#print p_l, p_r
 		D.remove(poly)
 		D.append([p_l, []])
 		D.append([p_r, []])
+		#print D
+		#print "Finished loop"
 
-
+	print D
 	# Start generating additional data structures for passing to the coverage
 	# planner
 	cvx_set = [poly[0] for poly in D]

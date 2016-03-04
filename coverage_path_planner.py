@@ -59,7 +59,7 @@ def coverage_path_planner(map_poly, method, specs):
 		print("[%18s] Using %s method."%(tk.current_time(), method))
 
 		print("[%18s] Generating a polygon."%tk.current_time())
-		P = dec.polygon_generator(4) ########### MAP NUMBER HERE!@!!!!!
+		P = dec.polygon_generator(6) ########### MAP NUMBER HERE!@!!!!!
 
 		print("[%18s] Invoking greedy decomposition."%tk.current_time())
 		#cvx_set, connectivity, shared_edges = dec.greedy_decompose(map_poly)
