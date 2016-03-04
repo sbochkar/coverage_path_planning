@@ -108,74 +108,57 @@ def get_altitude(P, theta):
 	# Form an adjacency list	
 	adjacency_dict = polygon_to_adjacency_dict([ext,holes])
 	# Create list of verts sorted by x-coordinates
-	keys_sorted_by_x = sorted(adjacency_dict.keys(), key=itemgetter(0))
+	verts_sorted_by_x = sorted(adjacency_dict.keys(), key=itemgetter(0))
 
 	# Record the min_x and initialize altitude and key with events
-	min_x = keys_sorted_by_x[0][0]
+	min_x = verts_sorted_by_x[0][0]
 	altitude = 0
 	active_event_counter = 0
 	repeated_event_keys = []
 
 	# Go through each vertex and increment altitude accordingly
-	for i in range(len(keys_sorted_by_x)):
+	prev_x = 0
+	checked_verts = []
+	for i in range(len(verts_sorted_by_x)):
+			
+		v = verts_sorted_by_x[i]
 
-		# If event has been captured by adjacent same level vertex -> ignore
-		if keys_sorted_by_x[i] in repeated_event_keys:
+		if v in checked_verts:
 			continue
 
-		current_x, current_y = keys_sorted_by_x[i]
-		adjacent_x_1, adjacent_y_1 = adjacency_dict[keys_sorted_by_x[i]][0]
-		adjacent_x_2, adjacent_y_2 = adjacency_dict[keys_sorted_by_x[i]][1]
+		x_v, y_v = v
+		x_adj_1, y_adj_1 = adjacency_dict[v][0]
+		x_adj_2, y_adj_2 = adjacency_dict[v][1]	
 
+		# Increment the altitude accordingly
 		if i>0:
-			delta_x = keys_sorted_by_x[i][0]-keys_sorted_by_x[i-1][0]
-			altitude += active_event_counter*delta_x
+			deltax = x_v-prev_x
+			altitude += active_event_counter*deltax
+			prev_x = x_v
 
-		print active_event_counter
+		# Handle the easy clear cut cases here
+		if (x_adj_1 > x_v) and (x_adj_2 > x_v):
+			active_event_counter += 1
+		elif (x_adj_1 < x_v) and (x_adj_2 < x_v):
+			active_event_counter -= 1
 
-		# Handle cases where adjacent edges are on the same level as the test pt
-		if (adjacent_x_1 > current_x):
-			if (adjacent_x_2 == current_x):
-				if adjacency_dict[keys_sorted_by_x[i]][1] in repeated_event_keys:
-					active_event_counter += 1
-				repeated_event_keys.append(keys_sorted_by_x[i])
-
-			elif (adjacent_x_2 > current_x):
+		# Handle the cases when some edges are parallel to sweep line
+		if (x_adj_1 > x_v) and (x_adj_2 == x_v):
+			if resolve_local_equality(adjacency_dict, adjacency_dict[v][1], v) == 1:
 				active_event_counter += 1
-
-			continue
-
-		if (adjacent_x_2 > current_x):
-			if (adjacent_x_1 == current_x):
-				if adjacency_dict[keys_sorted_by_x[i]][0] in repeated_event_keys:
-					active_event_counter += 1
-				repeated_event_keys.append(keys_sorted_by_x[i])
-
-			elif (adjacent_x_1 > current_x):
+				checked_verts.append(adjacency_dict[v][1])
+		if (x_adj_2 > x_v) and (x_adj_1 == x_v):
+			if resolve_local_equality(adjacency_dict, adjacency_dict[v][0], v) == 1:
 				active_event_counter += 1
-
-			continue
-
-		if (adjacent_x_1 < current_x):
-			if (adjacent_x_2 == current_x):
-				if adjacency_dict[keys_sorted_by_x[i]][1] in repeated_event_keys:
-					active_event_counter -= 1
-				repeated_event_keys.append(keys_sorted_by_x[i])
-			elif (adjacent_x_2 < current_x):
+				checked_verts.append(adjacency_dict[v][0])
+		if (x_adj_1 < x_v) and (x_adj_2 == x_v):
+			if resolve_local_equality(adjacency_dict, adjacency_dict[v][1], v) == -1:
 				active_event_counter -= 1
-
-			continue
-
-		if (adjacent_x_2 < current_x):
-			if (adjacent_x_1 == current_x):
-				if adjacency_dict[keys_sorted_by_x[i]][0] in repeated_event_keys:
-					active_event_counter -= 1
-
-				repeated_event_keys.append(keys_sorted_by_x[i])
-			elif (adjacent_x_1 < current_x):
+				checked_verts.append(adjacency_dict[v][1])
+		if (x_adj_2 < x_v) and (x_adj_1 == x_v):
+			if resolve_local_equality(adjacency_dict, adjacency_dict[v][0], v) == -1:
 				active_event_counter -= 1
-
-			continue
+				checked_verts.append(adjacency_dict[v][0])
 
 #		print("Test point: (%f, %f)"%(current_x, current_y))
 #		print("Adj1 point: (%f, %f)"%(adjacent_x_1, adjacent_y_1))
@@ -185,6 +168,26 @@ def get_altitude(P, theta):
 #		print repeated_event_keys
 #		print""
 	return altitude
+
+
+# Handle the cases where there are edges parallel to the sweep line
+def resolve_local_equality(adj_list, v, prev):
+	"""
+	Recursivley resolve which side the edges lie on
+	"""
+
+	adj = [adj_list[v][0], adj_list[v][1]]
+	adj.remove(prev)
+
+	x_v, x_y = v
+	x, y = adj[0]
+
+	if x > x_v:
+		return 1
+	elif x < x_v:
+		return -1
+	else:
+		return resolve_local_equality(adj_list, adj[0], v)
 
 
 def get_min_altitude(P):
@@ -725,21 +728,40 @@ if __name__ == "__main__":
 #			(4.0, 10.0),
 #			(0.0, 10.0)]
 
+#	ext = [(0,0),
+#			(4,0),
+#			(4,1),
+#			(6,1),
+#			(6,0),
+#			(10,0),
+#			(10,10),
+#			(6,10),
+#			(6,9),
+#			(4,9),
+#			(4,10),
+#			(0,10)]
+
 	ext = [(0,0),
-			(4,0),
-			(4,1),
-			(6,1),
-			(6,0),
 			(10,0),
 			(10,10),
-			(6,10),
-			(6,9),
-			(4,9),
-			(4,10),
-			(0,10)]
+			(0,10),
+			(0,6),
+			(1,6),
+			(1,4),
+			(0,4)]
 
-
-	holes = []
+	holes = [[(3,1),
+			(3,2),
+			(4,2),
+			(4,3),
+			(3,3),
+			(3,4),
+			(6,4),
+			(6,3),
+			(5,3),
+			(5,2),
+			(6,2),
+			(5,1)]]
 
 	print("Altitude is: %f"%get_altitude([ext, holes], 0))
 	#print find_reflex_vertices([ext, holes])
