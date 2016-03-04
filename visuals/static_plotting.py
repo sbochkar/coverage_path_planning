@@ -1,6 +1,7 @@
 try:
 	import matplotlib.pyplot as plt
 	from shapely.geometry import Polygon
+	from descartes import PolygonPatch
 except ImportError: print("Importing modules failed!")
 
 
@@ -25,7 +26,14 @@ def plot_polygon_outline(ax, polygon):
 	:param polygon: Possibly with holes
 	:return: None
 	"""
-	pass
+
+	P = Polygon(*polygon)
+	min_x, min_y, max_x, max_y = P.bounds
+
+	patch = PolygonPatch(P, facecolor="#6699cc", edgecolor="#6699cc", alpha=0.5, zorder=2)
+	ax.add_patch(patch)
+	ax.set_xlim([min_x,max_x])
+	ax.set_ylim([min_y,max_y])
 
 
 def plot_decomposition(ax, cvx_set, shared_edges):
@@ -84,6 +92,68 @@ def plot_samples(ax, lines):
 		for line in line_set:
 			x, y = zip(*line)
 			ax.plot(x, y, color='orange', alpha=0.9, linewidth=3, zorder=3)	
+
+
+def plot_grid(ax, grid):
+	"""
+	Function will plot the samples inside the cvx sets
+	:param ax: Axis object
+	:param lines: List of lines for each convex set
+	:return: None
+	"""
+	ax.scatter(zip(*grid)[0], zip(*grid)[1])
+
+
+def plot_grid_tour(ax, grid, tour, next_mtx):
+
+	def return_path(u, v, next_mtr):
+		"""
+		This function will return a path between a pair
+		of verticies
+		:param u: 1st vertex
+		:param v: 2nd vertex
+		:param next_mtr: path tree
+		"""
+		if next_mtr[u][v] is None:
+			return []
+
+		path = [u]
+
+		while u != v:
+			u = next_mtr[u][v]
+			path.append(u)
+
+		return path 
+
+	NUM_NODES_IN_CLUSTER = 8
+	path = []
+
+	path.append(grid[tour[0]])
+	for i in range(1, len(tour)):
+		ver_out = tour[i-1]
+		ver_in = tour[i]
+
+		destination_path = return_path(ver_out, ver_in, next_mtx)
+
+		if (len(destination_path)>2):
+			for i in range(1, len(destination_path)):
+				node_out = destination_path[i-1]/NUM_NODES_IN_CLUSTER
+				node_in = destination_path[i]/NUM_NODES_IN_CLUSTER
+
+				path.append(grid[node_in])
+
+				x = zip(*[grid[node_out], grid[node_in]])[0]
+				y = zip(*[grid[node_out], grid[node_in]])[1]
+				ax.plot(x, y, color='red', linewidth=2)
+			
+		else:
+			node_out = ver_out/NUM_NODES_IN_CLUSTER
+			node_in = ver_in/NUM_NODES_IN_CLUSTER
+			path.append(grid[node_in])
+
+			x = zip(*[grid[node_out], grid[node_in]])[0]
+			y = zip(*[grid[node_out], grid[node_in]])[1]
+			ax.plot(x, y, color='black', linewidth=1)
 
 
 def plot_tour(ax, tour, lines, dict_map):

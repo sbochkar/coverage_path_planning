@@ -193,7 +193,7 @@ def min_alt_decompose(P):
 #	prtty_print_set_polygon(cvx_set)
 #	prtty_print_connectivity(connectivity)
 #	prtty_print_shared_edges(shared_edges)
-	return P, cvx_set, connectivity, shared_edges
+	return cvx_set, connectivity, shared_edges
 
 
 def prtty_print_shared_edges(M):
@@ -231,16 +231,16 @@ def prtty_print_set_polygon(poly_list):
 		i += 1
 
 
-def greedy_decompose(map_poly):
+def greedy_decompose(P):
 	"""
 	Funcion will decompose a map into a set of convex polygon using greedy cut.
-	:param map_poly: Original map
+	:param P: Polygon to decompose
 	:return cvx_set: Set of convex polygons
 	:return connect_graph: Connectivity graph of the regions
 	:return shared_edges: Matrix showing shared edges between regions
 	"""
 
-	poly_xy, holes = map_poly
+	poly_xy, holes = P
 
 	exter = Polygon.from_tuples(poly_xy)
 

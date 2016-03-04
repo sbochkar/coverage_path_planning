@@ -602,23 +602,23 @@ def find_cut_space(P, v):
 	import pylab as p
 
 	# Plot the polygon itself
-	x, y = shp_polygon.exterior.xy
-	p.plot(x, y)
+#	x, y = shp_polygon.exterior.xy
+#	p.plot(x, y)
 
 	# plot the intersection of the cone with the polygon
-	intersection_x, intersection_y = shp_intersection.exterior.xy
-	p.plot(intersection_x, intersection_y)
+#	intersection_x, intersection_y = shp_intersection.exterior.xy
+#	p.plot(intersection_x, intersection_y)
 
 	#for interior in shp_intersection.interiors:
 	#	interior_x, interior_y = interior.xy
 	#	p.plot(interior_x, interior_y)
 
 	# Plot the reflex vertex
-	p.plot([observer.x()], [observer.y()], 'go')
+#	p.plot([observer.x()], [observer.y()], 'go')
 
-	p.plot(point_x, point_y)
+#	p.plot(point_x, point_y)
 
-	p.show()
+#	p.show()
 	#print cut_space
 	return cut_space
 
