@@ -47,11 +47,43 @@ def rotate(vertices, theta):
 	return new_points
 
 
-def get_altitude(P, theta):
-	""" Compute the altitude of polygon P with respect to direction theta.
+def polygon_to_adjacency_dict(P):
+	"""
+	Thie function will form an adjacency list representing polyong's edges.
 
-	Performs rotation of the polygon as to align with x-axis. Perform a
-	simplified trapezoidal sweep to compute the altitude.
+	Args:
+		P: polygon specified in the form of a tuple (ext, [int]). ext is a
+			list of (x, y) tuples specifying the exterior of a polygon ccw.
+			[int] is a list of lists of (x, y) tupeles specifying holes of a
+			polygon cw.
+
+	"""
+
+	ext = P[0]
+	holes = P[1] 
+
+	adjacency_dict = {}
+
+	n = len(ext)
+	for i in range(n):
+		adjacency_dict[ext[i]] = [ext[(i+1)%n], ext[(i-1)%n]]
+
+	for hole in holes:
+		n = len(hole)
+		for i in range(n):
+			adjacency_dict[hole[i]] = [hole[(i+1)%n], hole[(i-1)%n]]
+
+	return adjacency_dict	
+
+
+def get_altitude(P, theta):
+	"""
+	Compute theta altitude of polygon P.
+
+	Rotate the polygon to align sweep with the x-axis.
+	Sort all vertices of the polygon by x-coordinate.
+	Keep the counter of active corridors.
+	Sum up the lengths between events scaled by the counter.
 
 	Args:
 		P: polygon specified in the form of a tuple (ext, [int]). ext is a list
@@ -64,29 +96,18 @@ def get_altitude(P, theta):
 	"""
 
 	ext_orig = P[0]
-	if len(P) > 1:
-		holes_orig = P[1] 
+	holes_orig = P[1] 
 
 	# Rotate the polygon to align with x-axis
-	ext = rotate(ext_orig, -theta)
-
 	holes = []
+
+	ext = rotate(ext_orig, -theta)
 	for hole in holes_orig:
 		holes.append(rotate(hole, -theta))
 
-	# Form an adjacency list
-	adjacency_dict = {}
-
-	n = len(ext)
-	for i in range(n):
-		adjacency_dict[ext[i]] = [ext[(i+1)%n], ext[(i-1)%n]]
-
-	for hole in holes:
-		n = len(hole)
-		for i in range(n):
-			adjacency_dict[hole[i]] = [hole[(i+1)%n], hole[(i-1)%n]]			
-
-	# Create list of keys sorted by x-coordinates
+	# Form an adjacency list	
+	adjacency_dict = polygon_to_adjacency_dict([ext,holes])
+	# Create list of verts sorted by x-coordinates
 	keys_sorted_by_x = sorted(adjacency_dict.keys(), key=itemgetter(0))
 
 	# Record the min_x and initialize altitude and key with events
@@ -107,14 +128,17 @@ def get_altitude(P, theta):
 		adjacent_x_2, adjacent_y_2 = adjacency_dict[keys_sorted_by_x[i]][1]
 
 		if i>0:
-			delta_x = keys_sorted_by_x[i][0]-keys_sorted_by_x[i-1][0]	
+			delta_x = keys_sorted_by_x[i][0]-keys_sorted_by_x[i-1][0]
 			altitude += active_event_counter*delta_x
+			
 
 		# Handle cases where adjacent edges are on the same level as the test pt
 		if (adjacent_x_1 > current_x):
 			if (adjacent_x_2 == current_x):
+				if adjacency_dict[keys_sorted_by_x[i]][1] in repeated_event_keys:
+					active_event_counter += 1
+
 				repeated_event_keys.append(adjacency_dict[keys_sorted_by_x[i]][1])
-				active_event_counter += 1
 			elif (adjacent_x_2 > current_x):
 				active_event_counter += 1
 
@@ -122,8 +146,10 @@ def get_altitude(P, theta):
 
 		if (adjacent_x_2 > current_x):
 			if (adjacent_x_1 == current_x):
+				if adjacency_dict[keys_sorted_by_x[i]][0] in repeated_event_keys:
+					active_event_counter += 1
 				repeated_event_keys.append(adjacency_dict[keys_sorted_by_x[i]][0])
-				active_event_counter += 1
+				print current_x, current_y
 			elif (adjacent_x_1 > current_x):
 				active_event_counter += 1
 
@@ -131,8 +157,9 @@ def get_altitude(P, theta):
 
 		if (adjacent_x_1 < current_x):
 			if (adjacent_x_2 == current_x):
+				if adjacency_dict[keys_sorted_by_x[i]][1] in repeated_event_keys:
+					active_event_counter -= 1
 				repeated_event_keys.append(adjacency_dict[keys_sorted_by_x[i]][1])
-				active_event_counter -= 1
 			elif (adjacent_x_2 < current_x):
 				active_event_counter -= 1
 
@@ -140,8 +167,9 @@ def get_altitude(P, theta):
 
 		if (adjacent_x_2 < current_x):
 			if (adjacent_x_1 == current_x):
+				if adjacency_dict[keys_sorted_by_x[i]][0] in repeated_event_keys:
+					active_event_counter -= 1
 				repeated_event_keys.append(adjacency_dict[keys_sorted_by_x[i]][0])
-				active_event_counter -= 1
 			elif (adjacent_x_1 < current_x):
 				active_event_counter -= 1
 
@@ -330,6 +358,7 @@ def get_directions(P):
 	n = len(ext)
 	for i in range(n):
 		edge = [ext[i], ext[(i+1)%n]]
+		#print edge
 		ax, ay = edge[0]
 		bx, by = edge[1]
 
@@ -593,6 +622,7 @@ def find_optimal_cut(P, v):
 	pois = []
 
 	a, theta = get_min_altitude(P)
+	#print a, theta
 
 	s = find_cut_space(P, v)
 	#print s
@@ -626,10 +656,10 @@ def find_optimal_cut(P, v):
 	# Evaluate all transition points
 	for case in pois:
 		p_l, p_r = perform_cut(P, [v, case[0]])
-
+		#print p_l
 		a_l = get_altitude([p_l, []], case[1])
 		a_r = get_altitude([p_r, []], case[2])
-		#print a_l, a_r
+		print a_l, a_r
 		if a_l+a_r<=min_altitude:
 			min_altitude = a_l+a_r
 			min_altitude_idx = case
@@ -682,24 +712,24 @@ def cut(line, distance):
 
 if __name__ == "__main__":
 
-	ext = [(0,0),
-			(4,0),
-			(5,1),
-			(6,0),
-			(10,0),
-			(10,10),
-			(6,10),
-			(4,7),
-			(5,10),
-			(0,10)]
+	ext = [(0.0, 0.0),
+			(4.0, 0.0),
+			(5.0, 1.0),
+			(6.0, 0.0),
+			(10.0, 0.0),
+			(10.0, 10.0),
+			(6.0, 10.0),
+			(5.0, 9.0),
+			(4.0, 10.0),
+			(0.0, 10.0)]
 
 	holes = []
 
-	print("Altitude is: %f"%get_altitude([ext, holes], pi/2))
+	print("Altitude is: %f"%get_altitude([ext, holes], pi/4))
 	#print find_reflex_vertices([ext, holes])
 	#print find_cut_space([ext,holes], find_reflex_vertices([ext, holes])[0])
-	alt, (pt, dir1, dir2) = find_optimal_cut([ext, holes], (5,1))
-	print alt, pt, degrees(dir1), degrees(dir2)
+	#alt, (pt, dir1, dir2) = find_optimal_cut([ext, holes], (5,1))
+	#print alt, pt, degrees(dir1), degrees(dir2)
 	#find_cone_of_bisection([ext, holes], (4,1))
 	#print get_directions([ext, holes])
 	#print("Transition point: %s"%(find_transition_point([(0,1),(0,10)], 0, (8,6)),))

@@ -32,7 +32,7 @@ def min_alt_sampling(D, specs):
 		print poly
 		a, theta = alt.get_min_altitude([poly, []])
 
-		line_set, raw_line_set =  sample_with_lines(poly, theta, radius)
+		line_set, raw_line_set = sample_with_lines(poly, math.pi/2-theta, radius)
 		
 		line_storage.append(line_set)
 

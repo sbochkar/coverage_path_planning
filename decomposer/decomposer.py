@@ -4,16 +4,27 @@ from shapely.geometry import LineString
 
 def min_alt_decompose(map_poly):
 
-	ext = [(0.0,0.0),
-			(4.0,0.0),
-			(5.0,1.0),
-			(6.0,0.0),
-			(10.0,0.0),
-			(10.0,10.0),
-			(6.0,10.0),
-			(4.0,7.0),
-			(5.0,10.0),
-			(0.0,10.0)]
+#	ext = [(0.0,0.0),
+#			(4.0,0.0),
+#			(5.0,1.0),
+#			(6.0,0.0),
+#			(10.0,0.0),
+#			(10.0,10.0),
+#			(6.0,10.0),
+#			(4.0,7.0),
+#			(5.0,10.0),
+#			(0.0,10.0)]
+
+	ext = [(0.0, 0.0),
+			(4.0, 0.0),
+			(5.0, 1.0),
+			(6.0, 0.0),
+			(10.0, 0.0),
+			(10.0, 10.0),
+			(6.0, 10.0),
+			(5.0, 9.0),
+			(4.0, 10.0),
+			(0.0, 10.0)]
 
 	holes = []
 	P = [ext, holes]
@@ -44,7 +55,6 @@ def min_alt_decompose(map_poly):
 		if cut[1] in R:
 			R.remove(cut[0])
 
-		#print cut
 		p_l, p_r = alt.perform_cut(poly,[v,cut[1]])
 		D.remove(poly)
 		D.append([p_l, []])
@@ -102,7 +112,7 @@ def min_alt_decompose(map_poly):
 #	prtty_print_set_polygon(cvx_set)
 #	prtty_print_connectivity(connectivity)
 #	prtty_print_shared_edges(shared_edges)
-	return cvx_set, connectivity, shared_edges
+	return P, cvx_set, connectivity, shared_edges
 
 
 def prtty_print_shared_edges(M):

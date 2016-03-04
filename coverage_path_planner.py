@@ -60,7 +60,7 @@ def coverage_path_planner(map_poly, method, specs):
 
 		print("[%18s] Invoking greedy decomposition."%tk.current_time())
 		#cvx_set, connectivity, shared_edges = dec.greedy_decompose(map_poly)
-		cvx_set, connectivity, shared_edges = dec.min_alt_decompose(map_poly)
+		P, cvx_set, connectivity, shared_edges = dec.min_alt_decompose(map_poly)
 		print("[%18s] Finished greedy decomposition."%tk.current_time())
 		#print cvx_set
 		#print connectivity
@@ -81,7 +81,7 @@ def coverage_path_planner(map_poly, method, specs):
 
 		print("[%18s] Computing the cost matrix."%tk.current_time())
 		#cost_matrix, cluster_list = sc.init_cost_matrix(dict_mapping, lines)
-		cost_matrix, cluster_list = dc.init_cost_matrix(dict_mapping, lines, specs)
+		cost_matrix, cluster_list = dc.init_cost_matrix(P, dict_mapping, lines, specs)
 		print("[%18s] Launching GTSP instance."%tk.current_time())
 		gtsp.generate_gtsp_instance("cpp_test", "/home/sbochkar/misc/GLKH-1.0/", True, cost_matrix, cluster_list)
 

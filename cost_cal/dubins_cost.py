@@ -1,7 +1,8 @@
 import math
 import dubins
 
-def init_cost_matrix(dict_map, lines, specs):
+
+def init_cost_matrix(P, dict_map, lines, specs):
 	"""
 	This function initializes and computes the cost matrix for GTSP. Using dubins costs
 	:param dict_map: DIctionar of mapping from index to (poly, line, dir)
@@ -65,7 +66,16 @@ def init_cost_matrix(dict_map, lines, specs):
 			q1 = (e_line_1[0], e_line_1[1], e_angl)
 			length = dubins.path_length(q0, q1, r)
 
-			cost_matrix[i][j] = length
+			# Check for collisions in this step
+			from shapely.geometry import Polygon
+			from shapely.geometry import LineString
+			shp_polygon = Polygon(*P)
+			ls_transition = LineString([o_line_2, e_line_1])
+
+			if shp_polygon.contains(ls_transition):
+				cost_matrix[i][j] = length
+			else:
+				cost_matrix[i][j] = 100*length
 			#print("(%s, %s): %4f, %4f"%(o_line_2, e_line_2, cross_cost, dist_cost))
 
 
