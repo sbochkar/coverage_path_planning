@@ -599,20 +599,20 @@ def find_cut_space(P, v):
 
 	# Plot the polygon itself
 	x, y = shp_polygon.exterior.xy
-	p.plot(x, y)
+	#p.plot(x, y)
 
 	# plot the intersection of the cone with the polygon
 	intersection_x, intersection_y = shp_intersection.exterior.xy
-	p.plot(intersection_x, intersection_y)
+	#p.plot(intersection_x, intersection_y)
 
 	#for interior in shp_intersection.interiors:
 	#	interior_x, interior_y = interior.xy
 	#	p.plot(interior_x, interior_y)
 
 	# Plot the reflex vertex
-	p.plot([observer.x()], [observer.y()], 'go')
+	#p.plot([observer.x()], [observer.y()], 'go')
 
-	p.plot(point_x, point_y)
+	#p.plot(point_x, point_y)
 
 	#p.show()
 	#print cut_space
@@ -641,10 +641,12 @@ def find_optimal_cut(P, v):
 		# Process each edge si, have to be cw
 		lr_si = LinearRing([v]+si)
 		if lr_si.is_ccw:
+			#print lr_si
+			#print lr_si.is_ccw
 			si = [si[1]]+[si[0]]
+			#print si
 
 		cut_point = si[0]
-
 		p_l, p_r = perform_cut(P, [v, cut_point])
 		#print p_l, p_r
 
@@ -672,48 +674,78 @@ def find_optimal_cut(P, v):
 		
 
 	#print min_altitude, min_altitude_idx[0], degrees(min_altitude_idx[1]), degrees(min_altitude_idx[2])
-	return min_altitude, min_altitude_idx
+	return min_altitude_idx
 
 
 def perform_cut(P, e):
 	"""
-	Split up P into two polygons
+	Split up P into two polygons by cutting along e
 	"""
-
 
 	v = e[0]
 	w = e[1]
 	chain = LineString(P[0]+[P[0][0]])
 
 	distance_to_v = chain.project(Point(v))
-	cut_v_1, cut_v_2 = cut(chain, distance_to_v)
+	distance_to_w = chain.project(Point(w))
+	#print distance_to_v, distance_to_w, e
+	if distance_to_w > distance_to_v:
+		if distance_to_v == 0:
+			distance_to_w = chain.project(Point(w))
+			right_chain, remaining = cut(chain, distance_to_w)
 
-	distance_to_w = cut_v_2.project(Point(w))
-	right_chain, remaining = cut(cut_v_2, distance_to_w)
+			p_l = remaining.coords[:-1]
+			p_r = right_chain.coords[:]	
+		else:
+			cut_v_1, cut_v_2 = cut(chain, distance_to_v)
 
-	p_l = cut_v_1.coords[:]+remaining.coords[:-1]
-	p_r = right_chain.coords[:]
+			distance_to_w = cut_v_2.project(Point(w))
+			right_chain, remaining = cut(cut_v_2, distance_to_w)
 
-#	print p_l, p_r
+			p_l = cut_v_1.coords[:]+remaining.coords[:-1]
+			p_r = right_chain.coords[:]
+
+	else:
+		if distance_to_w == 0:
+			distance_to_v = chain.project(Point(v))
+			right_chain, remaining = cut(chain, distance_to_v)
+
+			p_l = remaining.coords[:-1]
+			p_r = right_chain.coords[:]		
+		else:
+			cut_v_1, cut_v_2 = cut(chain, distance_to_w)
+
+			distance_to_v = cut_v_2.project(Point(v))
+			right_chain, remaining = cut(cut_v_2, distance_to_v)
+
+			p_l = cut_v_1.coords[:]+remaining.coords[:-1]
+			p_r = right_chain.coords[:]
+
+	#print p_r
 	return p_l, p_r
 
 
 def cut(line, distance):
-    # Cuts a line in two at a distance from its starting point
-    if distance <= 0.0 or distance >= line.length:
-        return [LineString(line)]
-    coords = list(line.coords)
-    for i, p in enumerate(coords):
-        pd = line.project(Point(p))
-        if pd == distance:
-            return [
-                LineString(coords[:i+1]),
-                LineString(coords[i:])]
-        if pd > distance:
-            cp = line.interpolate(distance)
-            return [
-                LineString(coords[:i] + [(cp.x, cp.y)]),
-                LineString([(cp.x, cp.y)] + coords[i:])]
+	"""
+	Splicing a line
+	Credits go to author of the shapely manual
+	"""
+
+	# Cuts a line in two at a distance from its starting point
+	if distance <= 0.0 or distance >= line.length:
+		return [LineString(line)]
+	coords = list(line.coords)
+	for i, p in enumerate(coords):
+		pd = line.project(Point(p))
+		if pd == distance:
+			return [
+				LineString(coords[:i+1]),
+				LineString(coords[i:])]
+		if pd > distance:
+			cp = line.interpolate(distance)
+			return [
+				LineString(coords[:i] + [(cp.x, cp.y)]),
+				LineString([(cp.x, cp.y)] + coords[i:])]
 
 
 if __name__ == "__main__":
@@ -767,7 +799,7 @@ if __name__ == "__main__":
 
 #	print("Altitude is: %f"%get_altitude([ext, holes], 3*pi/2))
 	#print find_cut_space([ext,holes], find_reflex_vertices([ext, holes])[0])
-	alt, (pt, dir1, dir2) = find_optimal_cut([ext, holes], (5,1))
+	(pt, dir1, dir2) = find_optimal_cut([ext, holes], (5,1))
 	#print alt, pt, degrees(dir1), degrees(dir2)
 	#find_cone_of_bisection([ext, holes], (4,1))
 	#print get_directions([ext, holes])

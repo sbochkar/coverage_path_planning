@@ -2,20 +2,14 @@ from py2d.Math import Polygon
 import altitudes as alt
 from shapely.geometry import LineString
 
-def min_alt_decompose(map_poly):
 
-#	ext = [(0.0,0.0),
-#			(4.0,0.0),
-#			(5.0,1.0),
-#			(6.0,0.0),
-#			(10.0,0.0),
-#			(10.0,10.0),
-#			(6.0,10.0),
-#			(4.0,7.0),
-#			(5.0,10.0),
-#			(0.0,10.0)]
+def polygon_generator(map_num):
+	"""
+	Function returns a map specified by the map_number
+	"""
 
-	ext = [(0.0, 0.0),
+	if map_num == 1:
+		ext = [(0.0, 0.0),
 			(4.0, 0.0),
 			(5.0, 1.0),
 			(6.0, 0.0),
@@ -26,12 +20,32 @@ def min_alt_decompose(map_poly):
 			(4.0, 10.0),
 			(0.0, 10.0)]
 
-	holes = []
-	P = [ext, holes]
+		holes = []
+	elif map_num == 2:
+		ext = [(0.0,0.0),
+				(4.0,0.0),
+				(5.0,1.0),
+				(6.0,0.0),
+				(10.0,0.0),
+				(10.0,10.0),
+				(6.0,10.0),
+				(4.0,7.0),
+				(5.0,10.0),
+				(0.0,10.0)]
+
+		holes = []
+
+	return [ext, holes]
+
+
+def min_alt_decompose(P):
+	"""
+	Min Altitude Decomposition
+	"""
+
 
 	# Find all reflex vertices in P
 	R = alt.find_reflex_vertices(P)
-	#print R
 	D = [P]
 
 	#Cuts at all reflex vertices
@@ -47,15 +61,17 @@ def min_alt_decompose(map_poly):
 
 		# Find optimal cut
 		cut = alt.find_optimal_cut(poly, v)
+
 		# If best cut did not improve
 		if cut is None:
 			continue
 
 		# If cut was made to reflex vertex, remove it from the list
-		if cut[1] in R:
+		if cut[0] in R:
 			R.remove(cut[0])
+		R.remove(v)
 
-		p_l, p_r = alt.perform_cut(poly,[v,cut[1]])
+		p_l, p_r = alt.perform_cut(poly,[v,cut[0]])
 		D.remove(poly)
 		D.append([p_l, []])
 		D.append([p_r, []])
@@ -475,4 +491,4 @@ if __name__ == "__main__":
 	map_poly = [poly, holes]
 
 	#greedy_decompose(map_poly)
-	min_alt_decompose(1)
+	min_alt_decompose(polygon_generator(2))

@@ -58,9 +58,12 @@ def coverage_path_planner(map_poly, method, specs):
 	if method is Methods.local_line_sampling_2dir:
 		print("[%18s] Using %s method."%(tk.current_time(), method))
 
+		print("[%18s] Generating a polygon."%tk.current_time())
+		P = dec.polygon_generator(2) ########### MAP NUMBER HERE!@!!!!!
+
 		print("[%18s] Invoking greedy decomposition."%tk.current_time())
 		#cvx_set, connectivity, shared_edges = dec.greedy_decompose(map_poly)
-		P, cvx_set, connectivity, shared_edges = dec.min_alt_decompose(map_poly)
+		P, cvx_set, connectivity, shared_edges = dec.min_alt_decompose(P)
 		print("[%18s] Finished greedy decomposition."%tk.current_time())
 		#print cvx_set
 		#print connectivity
@@ -83,7 +86,7 @@ def coverage_path_planner(map_poly, method, specs):
 		#cost_matrix, cluster_list = sc.init_cost_matrix(dict_mapping, lines)
 		cost_matrix, cluster_list = dc.init_cost_matrix(P, dict_mapping, lines, specs)
 		print("[%18s] Launching GTSP instance."%tk.current_time())
-		gtsp.generate_gtsp_instance("cpp_test", "/home/sbochkar/misc/GLKH-1.0/", True, cost_matrix, cluster_list)
+		gtsp.generate_gtsp_instance("cpp_test", "/home/stan/misc/GLKH-1.0/", True, cost_matrix, cluster_list)
 
 		print("[%18s] Reading the results."%tk.current_time())
 		tour = gtsp.read_tour("cpp_test")
