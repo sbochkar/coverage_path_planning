@@ -130,15 +130,16 @@ def get_altitude(P, theta):
 		if i>0:
 			delta_x = keys_sorted_by_x[i][0]-keys_sorted_by_x[i-1][0]
 			altitude += active_event_counter*delta_x
-			
+
+		print active_event_counter
 
 		# Handle cases where adjacent edges are on the same level as the test pt
 		if (adjacent_x_1 > current_x):
 			if (adjacent_x_2 == current_x):
 				if adjacency_dict[keys_sorted_by_x[i]][1] in repeated_event_keys:
 					active_event_counter += 1
+				repeated_event_keys.append(keys_sorted_by_x[i])
 
-				repeated_event_keys.append(adjacency_dict[keys_sorted_by_x[i]][1])
 			elif (adjacent_x_2 > current_x):
 				active_event_counter += 1
 
@@ -148,8 +149,8 @@ def get_altitude(P, theta):
 			if (adjacent_x_1 == current_x):
 				if adjacency_dict[keys_sorted_by_x[i]][0] in repeated_event_keys:
 					active_event_counter += 1
-				repeated_event_keys.append(adjacency_dict[keys_sorted_by_x[i]][0])
-				print current_x, current_y
+				repeated_event_keys.append(keys_sorted_by_x[i])
+
 			elif (adjacent_x_1 > current_x):
 				active_event_counter += 1
 
@@ -159,7 +160,7 @@ def get_altitude(P, theta):
 			if (adjacent_x_2 == current_x):
 				if adjacency_dict[keys_sorted_by_x[i]][1] in repeated_event_keys:
 					active_event_counter -= 1
-				repeated_event_keys.append(adjacency_dict[keys_sorted_by_x[i]][1])
+				repeated_event_keys.append(keys_sorted_by_x[i])
 			elif (adjacent_x_2 < current_x):
 				active_event_counter -= 1
 
@@ -169,7 +170,8 @@ def get_altitude(P, theta):
 			if (adjacent_x_1 == current_x):
 				if adjacency_dict[keys_sorted_by_x[i]][0] in repeated_event_keys:
 					active_event_counter -= 1
-				repeated_event_keys.append(adjacency_dict[keys_sorted_by_x[i]][0])
+
+				repeated_event_keys.append(keys_sorted_by_x[i])
 			elif (adjacent_x_1 < current_x):
 				active_event_counter -= 1
 
@@ -712,20 +714,34 @@ def cut(line, distance):
 
 if __name__ == "__main__":
 
-	ext = [(0.0, 0.0),
-			(4.0, 0.0),
-			(5.0, 1.0),
-			(6.0, 0.0),
-			(10.0, 0.0),
-			(10.0, 10.0),
-			(6.0, 10.0),
-			(5.0, 9.0),
-			(4.0, 10.0),
-			(0.0, 10.0)]
+#	ext = [(0.0, 0.0),
+#			(4.0, 0.0),
+#			(5.0, 1.0),
+#			(6.0, 0.0),
+#			(10.0, 0.0),
+#			(10.0, 10.0),
+#			(6.0, 10.0),
+#			(5.0, 9.0),
+#			(4.0, 10.0),
+#			(0.0, 10.0)]
+
+	ext = [(0,0),
+			(4,0),
+			(4,1),
+			(6,1),
+			(6,0),
+			(10,0),
+			(10,10),
+			(6,10),
+			(6,9),
+			(4,9),
+			(4,10),
+			(0,10)]
+
 
 	holes = []
 
-	print("Altitude is: %f"%get_altitude([ext, holes], pi/4))
+	print("Altitude is: %f"%get_altitude([ext, holes], 0))
 	#print find_reflex_vertices([ext, holes])
 	#print find_cut_space([ext,holes], find_reflex_vertices([ext, holes])[0])
 	#alt, (pt, dir1, dir2) = find_optimal_cut([ext, holes], (5,1))
