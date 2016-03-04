@@ -422,10 +422,10 @@ def find_cone_of_bisection(P, v):
 	#print degrees(theta_l), degrees(theta_r)
 
 	# Consider several cases which will determine the measurement for the cone of bisection
-	if theta_l < 0 and theta_r < 0:
+	if theta_l < 0 and theta_r <= 0:
 		angle = abs(theta_l-theta_r)
 		orientation = abs(theta_r)+angle/2
-	elif theta_l < 0 and theta_r > 0:
+	elif theta_l <= 0 and theta_r > 0:
 		angle = theta_r-theta_l
 		orientation = pi+theta_l+angle/2
 	elif theta_l > 0 and theta_r > 0:

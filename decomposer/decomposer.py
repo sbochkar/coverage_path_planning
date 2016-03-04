@@ -35,6 +35,36 @@ def polygon_generator(map_num):
 
 		holes = []
 
+	elif map_num == 3:
+		ext = [(1.0, 0),
+				(9.0, 0),
+				(9.0, 1.0),
+				(10.0, 1.0),
+				(10.0, 9.0),
+				(9.0, 9.0),
+				(9.0, 10.0),
+				(1.0, 10.0),
+				(1.0, 9.0),
+				(0.0, 9.0),
+				(0.0, 1.0),
+				(1.0, 1.0)]
+
+		holes = []
+
+	elif map_num == 4:
+		ext = [(0.0, 0),
+				(1.0, 0),
+				(1.0, 8.0),
+				(9.0, 0.0),
+				(10.0, 0.0),
+				(10.0, 10.0),
+				(9.0, 10.0),
+				(9.0, 2.0),
+				(1.0, 10.0),
+				(0.0, 10.0)]
+
+		holes = []
+
 	return [ext, holes]
 
 
@@ -61,7 +91,7 @@ def min_alt_decompose(P):
 
 		# Find optimal cut
 		cut = alt.find_optimal_cut(poly, v)
-
+		#print cut
 		# If best cut did not improve
 		if cut is None:
 			continue
@@ -70,12 +100,11 @@ def min_alt_decompose(P):
 		if cut[0] in R:
 			R.remove(cut[0])
 		R.remove(v)
-
+		print R
 		p_l, p_r = alt.perform_cut(poly,[v,cut[0]])
 		D.remove(poly)
 		D.append([p_l, []])
 		D.append([p_r, []])
-		#print D
 
 
 	# Start generating additional data structures for passing to the coverage
@@ -491,4 +520,4 @@ if __name__ == "__main__":
 	map_poly = [poly, holes]
 
 	#greedy_decompose(map_poly)
-	min_alt_decompose(polygon_generator(2))
+	min_alt_decompose(polygon_generator(4))

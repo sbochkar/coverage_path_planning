@@ -367,8 +367,11 @@ def sample_with_lines(shape, theta, r):
 		# Intersections have been determined for one line, now process
 		x1, y1 = line_dict['end_pts'][0]
 		x2, y2 = line_dict['end_pts'][1]
-		print line_dict['offset']
-		ofs1, ofs2 = line_dict['offset']
+		if len(line_dict['offset'])>2: #REALLY BAD FIX NEED TO FIX
+			ofs1, ofs2 = line_dict['offset'][0:2]		
+		else:
+			ofs1, ofs2 = line_dict['offset']
+
 
 		# Make sure line is long enough to accomodate offset
 		if abs(x2 - x1) >= ofs1+ofs2:

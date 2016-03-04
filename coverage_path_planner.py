@@ -59,7 +59,7 @@ def coverage_path_planner(map_poly, method, specs):
 		print("[%18s] Using %s method."%(tk.current_time(), method))
 
 		print("[%18s] Generating a polygon."%tk.current_time())
-		P = dec.polygon_generator(2) ########### MAP NUMBER HERE!@!!!!!
+		P = dec.polygon_generator(4) ########### MAP NUMBER HERE!@!!!!!
 
 		print("[%18s] Invoking greedy decomposition."%tk.current_time())
 		#cvx_set, connectivity, shared_edges = dec.greedy_decompose(map_poly)
@@ -70,27 +70,27 @@ def coverage_path_planner(map_poly, method, specs):
 		#print shared_edges
 		print("[%18s] Startint to sample the free space with lines."%tk.current_time())
 		lines = lsmpl.min_alt_sampling(cvx_set, specs)
-		#lines = lsmpl.ilp_finite_dir_line_sampling(cvx_set, connectivity, shared_edges, [0, math.pi/2], specs)
-		print lines
-		#print lines[0][0][0]
-		#temp = lines[0][0][0]
-		#lines[0][0][0] = lines[0][0][1]
-		#lines[0][0][1] = temp
-		#print lines[0][0][0]
-		print("[%18s] Finished samling."%tk.current_time())
-
-		print("[%18s] Initializing GTSP cost matrix."%tk.current_time())
-		dict_mapping = lsmpl.init_dict_mapping(lines)
-
-		print("[%18s] Computing the cost matrix."%tk.current_time())
-		#cost_matrix, cluster_list = sc.init_cost_matrix(dict_mapping, lines)
-		cost_matrix, cluster_list = dc.init_cost_matrix(P, dict_mapping, lines, specs)
-		print("[%18s] Launching GTSP instance."%tk.current_time())
-		gtsp.generate_gtsp_instance("cpp_test", "/home/stan/misc/GLKH-1.0/", True, cost_matrix, cluster_list)
-
-		print("[%18s] Reading the results."%tk.current_time())
-		tour = gtsp.read_tour("cpp_test")
-		tour = gtsp.process_tour(tour, cluster_list)
+#		#lines = lsmpl.ilp_finite_dir_line_sampling(cvx_set, connectivity, shared_edges, [0, math.pi/2], specs)
+#		print lines
+#		#print lines[0][0][0]
+#		#temp = lines[0][0][0]
+#		#lines[0][0][0] = lines[0][0][1]
+#		#lines[0][0][1] = temp
+#		#print lines[0][0][0]
+#		print("[%18s] Finished samling."%tk.current_time())
+#
+#		print("[%18s] Initializing GTSP cost matrix."%tk.current_time())
+#		dict_mapping = lsmpl.init_dict_mapping(lines)
+#
+#		print("[%18s] Computing the cost matrix."%tk.current_time())
+#		#cost_matrix, cluster_list = sc.init_cost_matrix(dict_mapping, lines)
+#		cost_matrix, cluster_list = dc.init_cost_matrix(P, dict_mapping, lines, specs)
+#		print("[%18s] Launching GTSP instance."%tk.current_time())
+#		gtsp.generate_gtsp_instance("cpp_test", "/home/stan/misc/GLKH-1.0/", True, cost_matrix, cluster_list)
+#
+#		print("[%18s] Reading the results."%tk.current_time())
+#		tour = gtsp.read_tour("cpp_test")
+#		tour = gtsp.process_tour(tour, cluster_list)
 		ax = splot.init_axis()
 
 		# Implementation missing for now
@@ -104,7 +104,7 @@ def coverage_path_planner(map_poly, method, specs):
 
 		print("[%18s] Plotting path."%tk.current_time())
 		#splot.plot_tour(ax, tour, lines, dict_mapping)
-		splot.plot_tour_dubins(ax, tour, lines, dict_mapping, radius)
+		#splot.plot_tour_dubins(ax, tour, lines, dict_mapping, radius)
 
 		splot.display()
 		
@@ -118,7 +118,7 @@ def coverage_path_planner(map_poly, method, specs):
 
 if __name__ == "__main__":
 
-	specs = {"radius": 0.3}
+	specs = {"radius": 0.4}
 	mappp = 1
 
 	if mappp == 0:
