@@ -91,6 +91,40 @@ def polygon_generator(map_num):
 				(0.0, 5.0)]
 
 		holes = []
+	elif map_num == 7:
+		ext = [(0,0),
+				(10,0),
+				(10,10),
+				(0,10)]
+
+		holes = [[(3,4),
+				(3,7),
+				(7,7),
+				(7,4)]]		
+	elif map_num == 8:
+		ext = [(0,0),
+				(10,0),
+				(10,10),
+				(0,10)]
+
+		holes = [[(1,1),
+				(1,4),
+				(2,4),
+				(2,3),
+				(8,3),
+				(8,8),
+				(2,8),
+				(2,7),
+				(1,7),
+				(1,9),
+				(9,9),
+				(9,1)],
+				[(3,4),
+				(3,7),
+				(7,7),
+				(7,4)]]
+
+
 
 	return [ext, holes]
 
@@ -98,46 +132,42 @@ def polygon_generator(map_num):
 def min_alt_decompose(P):
 	"""
 	Min Altitude Decomposition
+	v2.0: Now including iterative minimzation
 	"""
 
+	min_alt, theta = alt.get_min_altitude(P)
+	D, active_verts = alt.combine_chains(P, theta)
+	#R = alt.find_reflex_vertices(D)
+	#print("Reflex set: %s"%(R,))
+	cut = alt.find_optimal_cut(poly, v)
 
-	# Find all reflex vertices in P
-	R = alt.find_reflex_vertices(P)
-	D = [P]
-
-	#Cuts at all reflex vertices
-	while R:
-		v = R.pop()
-		for poly in D:
-			if v in poly[0]:
-				#print poly
-				break
-			else:
-				for hole in poly[1]:
-					if v in hole:
-						break
-
-		# If cut was made previously to a reflex vertex and its cone of bisection
-		# Need to check if it was eliminated here, check later.
-		R_temp = alt.find_reflex_vertices(poly)
-		if v not in R_temp:
-			continue
-		# Find optimal cut
-		#print poly, v
-		cut = alt.find_optimal_cut(poly, v)
-		print cut
-		# If best cut did not improve
-		if cut is None:
-			continue
-		#print poly, v, cut[0]
-		p_l, p_r = alt.perform_cut(poly,[v,cut[0]])
-		#print "New polygons"
-		#print p_l, p_r
-		D.remove(poly)
-		D.append([p_l, []])
-		D.append([p_r, []])
-		#print D
-		#print "Finished loop"
+#	D = [[D, []]]
+#	while R:
+#		v = R.pop()
+#		for poly in D:
+#			if v in poly[0]:
+#				break
+#
+#		R_temp = alt.find_reflex_vertices(poly)
+#		if v not in R_temp:
+#			continue
+#
+#		#print poly
+#		#print v
+#		cut = alt.find_optimal_cut(poly, v)
+#		#print cut
+#		# If best cut did not improve
+#		if cut is None:
+#			continue
+#		#print poly, v, cut[0]
+#		p_l, p_r = alt.perform_cut(poly,[v,cut[0]])
+#		#print "New polygons"
+#		#print p_l, p_r
+#		D.remove(poly)
+#		D.append([p_l, []])
+#		D.append([p_r, []])
+#		#print D
+#		#print "Finished loop"
 
 	# Start generating additional data structures for passing to the coverage
 	# planner
@@ -552,4 +582,4 @@ if __name__ == "__main__":
 	map_poly = [poly, holes]
 
 	#greedy_decompose(map_poly)
-	min_alt_decompose(polygon_generator(4))
+	min_alt_decompose(polygon_generator(7))

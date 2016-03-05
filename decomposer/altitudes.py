@@ -47,6 +47,34 @@ def rotate(vertices, theta):
 	return new_points
 
 
+#def polygon_to_adjacency_dict(P):
+#	"""
+#	Thie function will form an adjacency list representing polyong's edges.
+#
+#	Args:
+#		P: polygon specified in the form of a tuple (ext, [int]). ext is a
+#			list of (x, y) tuples specifying the exterior of a polygon ccw.
+#			[int] is a list of lists of (x, y) tupeles specifying holes of a
+#			polygon cw.
+#
+#	"""
+#
+#	ext = P[0]
+#	holes = P[1] 
+#
+#	adjacency_dict = {}
+#
+#	n = len(ext)
+#	for i in range(n):
+#		adjacency_dict[ext[i]] = [ext[(i+1)%n], ext[(i-1)%n]]
+#
+#	for hole in holes:
+#		n = len(hole)
+#		for i in range(n):
+#			adjacency_dict[hole[i]] = [hole[(i+1)%n], hole[(i-1)%n]]
+#
+#	return adjacency_dict	
+
 def polygon_to_adjacency_dict(P):
 	"""
 	Thie function will form an adjacency list representing polyong's edges.
@@ -66,12 +94,19 @@ def polygon_to_adjacency_dict(P):
 
 	n = len(ext)
 	for i in range(n):
-		adjacency_dict[ext[i]] = [ext[(i+1)%n], ext[(i-1)%n]]
+		unique_id = i, ext[i]
+		next_id = (i+1)%n, ext[(i+1)%n]
+		prev_id = (i-1)%n, ext[(i-1)%n]
+		adjacency_dict[unique_id] = [next_id, prev_id]
 
+	ext_n = n
 	for hole in holes:
 		n = len(hole)
 		for i in range(n):
-			adjacency_dict[hole[i]] = [hole[(i+1)%n], hole[(i-1)%n]]
+			unique_id = i+ext_n, hole[i]
+			next_id = ((i+1)%n)+ext_n, hole[(i+1)%n]
+			prev_id = ((i-1)%n)+ext_n, hole[(i-1)%n]
+			adjacency_dict[unique_id] = [next_id, prev_id]
 
 	return adjacency_dict	
 
@@ -98,40 +133,35 @@ def get_altitude(P, theta):
 	ext_orig = P[0]
 	holes_orig = P[1] 
 
-	# Rotate the polygon to align with x-axis
 	holes = []
 
 	ext = rotate(ext_orig, -theta)
-	#print ext
 	for hole in holes_orig:
 		holes.append(rotate(hole, -theta))
 
-	# Form an adjacency list	
 	adjacency_dict = polygon_to_adjacency_dict([ext,holes])
-	# Create list of verts sorted by x-coordinates
-	verts_sorted_by_x = sorted(adjacency_dict.keys(), key=itemgetter(0))
+	sorted_by_x = sorted(adjacency_dict.keys(), key=lambda pt: pt[1][0])
+	print("Sorted list of points: %s"%(sorted_by_x,))
 
-	# Record the min_x and initialize altitude and key with events
-	min_x = verts_sorted_by_x[0][0]
 	altitude = 0
 	active_event_counter = 0
-	repeated_event_keys = []
 
-	# Go through each vertex and increment altitude accordingly
 	prev_x = -10000000
 	checked_verts = []
-	#print verts_sorted_by_x
-	for i in range(len(verts_sorted_by_x)):
+	for i in range(len(sorted_by_x)):
 			
-		v = verts_sorted_by_x[i]
-		#print("%d, %5f, %s)"%(active_event_counter, altitude,v))
+		v = sorted_by_x[i]
 
 		if v in checked_verts:
 			continue
 
-		x_v, y_v = v
-		x_adj_1, y_adj_1 = adjacency_dict[v][0]
-		x_adj_2, y_adj_2 = adjacency_dict[v][1]	
+		x_v, y_v = v[1]
+		x_adj_1, y_adj_1 = adjacency_dict[v][0][1]
+		x_adj_2, y_adj_2 = adjacency_dict[v][1][1]
+		#print("Current : %s"%(v,))	
+		#print("Next adj: %s"%((x_adj_1, y_adj_1),))	
+		#print("Prev adj: %s"%((x_adj_2, y_adj_2),))	
+		#print("%d, %5f, %s"%(active_event_counter, altitude,v))
 
 		# Increment the altitude accordingly
 		if i>0:
@@ -173,6 +203,104 @@ def get_altitude(P, theta):
 	return altitude
 
 
+#def get_altitude(P, theta):
+#	"""
+#	Compute theta altitude of polygon P.
+#
+#	Rotate the polygon to align sweep with the x-axis.
+#	Sort all vertices of the polygon by x-coordinate.
+#	Keep the counter of active corridors.
+#	Sum up the lengths between events scaled by the counter.
+#
+#	Args:
+#		P: polygon specified in the form of a tuple (ext, [int]). ext is a list
+#			of (x, y) tuples specifying the exterior of a polygon ccw. [int] is
+#			a list of lists of (x, y) tupeles specifying holes of a polygon cw.
+#		theta: angle of measurement with respect to x-axis
+#
+#	Returns:
+#		altitude: A scalar value of the altitude
+#	"""
+#
+#	ext_orig = P[0]
+#	holes_orig = P[1] 
+#
+#	# Rotate the polygon to align with x-axis
+#	holes = []
+#
+#	ext = rotate(ext_orig, -theta)
+#	#print ext
+#	for hole in holes_orig:
+#		holes.append(rotate(hole, -theta))
+#
+#	# Form an adjacency list	
+#	adjacency_dict = polygon_to_adjacency_dict([ext,holes])
+#	# Create list of verts sorted by x-coordinates
+#	verts_sorted_by_x = sorted(adjacency_dict.keys(), key=itemgetter(0))
+#	#sorted_by_x = sorted(adjacency_dict.keys(), key=lambda pt: pt[1][0])
+#	#print("Sorted list of points: %s"%(verts_sorted_by_x,))
+#	# Record the min_x and initialize altitude and key with events
+#	min_x = verts_sorted_by_x[0][0]
+#	altitude = 0
+#	active_event_counter = 0
+#	repeated_event_keys = []
+#
+#	# Go through each vertex and increment altitude accordingly
+#	prev_x = -10000000
+#	checked_verts = []
+#	#print verts_sorted_by_x
+#	for i in range(len(verts_sorted_by_x)):
+#			
+#		v = verts_sorted_by_x[i]
+#		#print("%d, %5f, %s)"%(active_event_counter, altitude,v))
+#
+#		if v in checked_verts:
+#			continue
+#
+#		x_v, y_v = v
+#		x_adj_1, y_adj_1 = adjacency_dict[v][0]
+#		x_adj_2, y_adj_2 = adjacency_dict[v][1]	
+#
+#		# Increment the altitude accordingly
+#		if i>0:
+#			deltax = x_v-prev_x
+#			altitude += active_event_counter*deltax
+#		prev_x = x_v
+#
+#		# Handle the easy clear cut cases here
+#		if (x_adj_1 > x_v) and (x_adj_2 > x_v):
+#			active_event_counter += 1
+#		elif (x_adj_1 < x_v) and (x_adj_2 < x_v):
+#			active_event_counter -= 1
+#
+#		# Handle the cases when some edges are parallel to sweep line
+#		if (x_adj_1 > x_v) and (x_adj_2 == x_v):
+#			if resolve_local_equality(adjacency_dict, adjacency_dict[v][1], v) == 1:
+#				active_event_counter += 1
+#				checked_verts.append(adjacency_dict[v][1])
+#		if (x_adj_2 > x_v) and (x_adj_1 == x_v):
+#			if resolve_local_equality(adjacency_dict, adjacency_dict[v][0], v) == 1:
+#				active_event_counter += 1
+#				checked_verts.append(adjacency_dict[v][0])
+#		if (x_adj_1 < x_v) and (x_adj_2 == x_v):
+#			if resolve_local_equality(adjacency_dict, adjacency_dict[v][1], v) == -1:
+#				active_event_counter -= 1
+#				checked_verts.append(adjacency_dict[v][1])
+#		if (x_adj_2 < x_v) and (x_adj_1 == x_v):
+#			if resolve_local_equality(adjacency_dict, adjacency_dict[v][0], v) == -1:
+#				active_event_counter -= 1
+#				checked_verts.append(adjacency_dict[v][0])
+#
+##		print("Test point: (%f, %f)"%(current_x, current_y))
+##		print("Adj1 point: (%f, %f)"%(adjacent_x_1, adjacent_y_1))
+##		print("Adj2 point: (%f, %f)"%(adjacent_x_2, adjacent_y_2))
+##		print("Counter: %d"%active_event_counter)
+##		print("Altitude: %f"%altitude)
+##		print repeated_event_keys
+##		print""
+#	return altitude
+
+
 # Handle the cases where there are edges parallel to the sweep line
 def resolve_local_equality(adj_list, v, prev):
 	"""
@@ -180,7 +308,9 @@ def resolve_local_equality(adj_list, v, prev):
 	"""
 
 	adj = [adj_list[v][0], adj_list[v][1]]
-	adj.remove(prev)
+	
+	if prev in adj:
+		adj.remove(prev)
 
 	x_v, x_y = v
 	x, y = adj[0]
@@ -227,16 +357,8 @@ def find_reflex_vertices(P):
 		R: A list of reflex vertices
 	"""
 
-	# Add check for checking the type of polygon
-	if len(P) == 2:
-		# Standard form of a polygon
-		ext = P[0]
-		holes = P[1] 	
-	else:
-		ext = P
-		holes = []
-
 	R = []
+	adj_dict = polygon_to_adjacency_dict(P)
 
 	# Reflex vertices on the boundary first
 	n = len(ext)
@@ -268,6 +390,67 @@ def find_reflex_vertices(P):
 				R.append(p_1)		
 
 	return R
+
+#def find_reflex_vertices(P):
+#	"""
+#	Return a list of reflex vertices in P
+#
+#	Function will iterate over all vertices in P and return a list of reflex
+#	vertices
+#
+#	Args:
+#		P: (ext, [int]) tuple of list of (x,y) vertices 
+#			ext is a ccw list of vertices for boundary
+#			int is cw list of vertices for holes
+#	Returns:
+#		R: A list of reflex vertices
+#	"""
+#
+#	adj_dict = polygon_to_adjacency_dict(P)
+#
+#	# Add check for checking the type of polygon
+#	if len(P) == 2:
+#		# Standard form of a polygon
+#		ext = P[0]
+#		holes = P[1] 	
+#	else:
+#		ext = P
+#		holes = []
+#
+#	R = []
+#
+#	# Reflex vertices on the boundary first
+#	n = len(ext)
+#	for i in range(n):
+#		p_0 = ext[(i-2)%n]
+#		p_1 = ext[(i-1)%n]
+#		p_2 = ext[i]
+#
+#		dx_1 = float(p_1[0])-float(p_0[0])
+#		dy_1 = float(p_1[1])-float(p_0[1])
+#		dx_2 = float(p_2[0])-float(p_1[0])
+#		dy_2 = float(p_2[1])-float(p_1[1])
+#		if dx_1*dy_2-dy_1*dx_2 < 0.0:
+#			R.append(p_1)
+#
+#	# Reflex vertices from holes
+#	for hole in holes:
+#		n = len(hole)
+#		for i in range(n):
+#			p_0 = hole[(i-2)%n]
+#			p_1 = hole[(i-1)%n]
+#			p_2 = hole[i]
+#
+#			dx_1 = float(p_1[0])-float(p_0[0])
+#			dy_1 = float(p_1[1])-float(p_0[1])
+#			dx_2 = float(p_2[0])-float(p_1[0])
+#			dy_2 = float(p_2[1])-float(p_1[1])
+#			if dx_1*dy_2-dy_1*dx_2 < 0.0:
+#				R.append(p_1)		
+#
+#	return R
+
+
 
 
 def find_transition_point(s_orig, theta, cut_origin):
@@ -398,6 +581,8 @@ def find_cone_of_bisection(P, v):
 
 	# Compute an approximationg to the radius of the cone of bisection
 	shp_polygon = Polygon(P[0], P[1])
+	#print("Polygon: %s"%shp_polygon)
+
 	min_x, min_y, max_x, max_y = shp_polygon.bounds
 	rad = sqrt((max_x-min_x)**2+(max_y-min_y)**2)
 
@@ -405,25 +590,18 @@ def find_cone_of_bisection(P, v):
 	holes = P[1]
 
 	# Form an adjacency list for easy access to adjacent edges
-	adjacency_dict = {}
-
-	n = len(ext)
-	for i in range(n):
-		adjacency_dict[ext[i]] = [ext[(i+1)%n], ext[(i-1)%n]]
-
-	for hole in holes:
-		n = len(hole)
-		for i in range(n):
-			adjacency_dict[hole[i]] = [hole[(i+1)%n], hole[(i-1)%n]]
+	adjacency_dict = polygon_to_adjacency_dict(P)
 
 	#Find adjacent edges of v
-	v_l = adjacency_dict[v][1]
-	v_r = adjacency_dict[v][0]
+	v_l_id = adjacency_dict[v][1]; 	v_r_id = adjacency_dict[v][0]
+	v_l = v_l_id[1]; v_r = v_r_id[1]
+	print("v: %s"%(v,))
+	print("v_l: %s, v_r: %s"%(v_l, v_r))
 
 	# Find the angle of v_l with the x-axis
 	theta_l = atan2(v_l[1]-v[1], v_l[0]-v[0])
 	theta_r = atan2(v_r[1]-v[1], v_r[0]-v[0])
-	#print degrees(theta_l), degrees(theta_r)
+	print("Th_l: %2f, Th_r: %2f"%(degrees(theta_l), degrees(theta_r)))
 
 	# Consider several cases which will determine the measurement for the cone of bisection
 	#print degrees(theta_l), degrees(theta_r)
@@ -431,7 +609,7 @@ def find_cone_of_bisection(P, v):
 		angle = abs(theta_l-theta_r)
 		orientation = pi+theta_l+angle/2
 		#print degrees(angle), degrees(orientation)
-	elif theta_l < 0 and theta_r >= 0:
+	elif theta_l <= 0 and theta_r >= 0:
 		angle = theta_r-theta_l
 		#orientation = pi+theta_l+angle/2
 		orientation = pi+theta_l+angle/2
@@ -476,10 +654,58 @@ def find_cut_space(P, v):
 	epsilon = 0.0000001
 
 	# Using shapely library, compute the cone of bisection
-	shp_polygon = shapely.geometry.polygon.orient(Polygon(*P))
-	shp_cone 	= shapely.geometry.polygon.orient(Polygon(find_cone_of_bisection(P, v)))
+#	shp_polygon = shapely.geometry.polygon.orient(Polygon(*P))
+#	shp_cone 	= shapely.geometry.polygon.orient(Polygon(find_cone_of_bisection(P, v)))
 
-	shp_intersection = shapely.geometry.polygon.orient(shp_cone.intersection(shp_polygon))
+	shp_polygon = Polygon(*P)
+	#print("Polygon: %s"%shp_polygon)
+
+	cone_of_bisection = find_cone_of_bisection(P, v)
+	shp_cone 	= Polygon(find_cone_of_bisection(P, v))
+	#print("Cone of bisection: %s"%cone_of_bisection)
+
+
+	shp_intersection = shp_cone.intersection(shp_polygon)
+	#print("Intersection: %s"%shp_intersection)
+
+#	import pylab as p
+#
+#	# Plot the polygon itself
+#	x, y = shp_polygon.exterior.xy
+#	p.plot(x, y)
+#	x, y = shp_cone.exterior.xy
+#	p.plot(x, y)
+#	x, y = shp_intersection.exterior.xy
+#	p.plot(x, y)
+#	p.show()
+
+	# plot the intersection of the cone with the polygon
+	#intersection_x, intersection_y = shp_intersection.exterior.xy
+	#p.plot(intersection_x, intersection_y)
+
+	#for interior in shp_intersection.interiors:
+	#	interior_x, interior_y = interior.xy
+	#	p.plot(interior_x, interior_y)
+
+	# Plot the reflex vertex
+	#p.plot([observer.x()], [observer.y()], 'go')
+
+	#p.plot(point_x, point_y)
+
+
+
+	if shp_intersection.geom_type == "MultiPolygon":
+		shp_intersection = shp_intersection[0]
+		#print shp_intersection
+	elif shp_intersection.geom_type == "GeometryCollection":
+		for shape in shp_intersection:
+			if shape.geom_type == "Polygon":
+				shp_intersection = shape
+				break
+	else:
+		#shp_intersection = shapely.geometry.polygon.orient(shp_intersection)	
+		shp_intersection = (shp_intersection)	
+	#shp_intersection = shapely.geometry.polygon.orient(shp_cone.intersection(shp_polygon))
 
 	#Using the visilibity library, define the reflex vertex
 	observer = vis.Point(*v)
@@ -602,25 +828,25 @@ def find_cut_space(P, v):
 	#print cut_space
 
 	# PLOTTING
-	import pylab as p
-
-	# Plot the polygon itself
+#	import pylab as p
+#
+#	# Plot the polygon itself
 #	x, y = shp_polygon.exterior.xy
 #	p.plot(x, y)
-
-	# plot the intersection of the cone with the polygon
+#
+#	# plot the intersection of the cone with the polygon
 #	intersection_x, intersection_y = shp_intersection.exterior.xy
 #	p.plot(intersection_x, intersection_y)
-
-	#for interior in shp_intersection.interiors:
-	#	interior_x, interior_y = interior.xy
-	#	p.plot(interior_x, interior_y)
-
-	# Plot the reflex vertex
+#
+#	#for interior in shp_intersection.interiors:
+#	#	interior_x, interior_y = interior.xy
+#	#	p.plot(interior_x, interior_y)
+#
+#	# Plot the reflex vertex
 #	p.plot([observer.x()], [observer.y()], 'go')
-
+#
 #	p.plot(point_x, point_y)
-
+#
 #	p.show()
 	#print cut_space
 	return cut_space
@@ -766,12 +992,12 @@ def cut(line, distance):
 				LineString([(cp.x, cp.y)] + coords[i:])]
 
 
-def combine_chains(P):
+def combine_chains(P, theta):
 	"""
 	Combine the chains of a polygon to form one non-simple connected chain
 	"""
 
-	alt, theta = get_min_altitude(P)
+	active_verts = []
 
 	ext = P[0]
 	ext = rotate(ext, -theta)
@@ -866,8 +1092,9 @@ def combine_chains(P):
 		else:
 			chains[cut_parameters[1]] = final_chain
 
+		active_verts.append(v)
 		#print chains
-	return rotate(chains[len(chains)-1], theta)
+	return rotate(chains[len(chains)-1], theta), active_verts
 
 
 def get_points_from_intersection(intersection):
@@ -1012,13 +1239,37 @@ if __name__ == "__main__":
 #			(5,3),
 #			(5,2),
 #			(6,2),
-#			(5,1)]]
+#			(6,1)]]
 
-#	print("Altitude is: %f"%get_altitude([ext, holes], 3*pi/2))
+#	ext = [(0,0),
+#		(10,0),
+#		(10,10),
+#		(0,10)]
+#	holes = [[(2,2),
+#				(8,2),
+#				(8,8),
+#				(2,8)]]
+
+#	ext = [(0,0),
+#			(8,0),
+#			(8,2),
+#			(2,2),
+#			(2,8),
+#			(8,8),
+#			(8,2),
+#			(8,0),
+#			(10,0),
+#			(10,10),
+#			(0,10)]
+#	holes = []
+
+
+	P = [ext, holes]
+#	print("Altitude is: %f"%get_altitude([ext, holes], 0))
 	#print find_cut_space([ext,holes], find_reflex_vertices([ext, holes])[0])
 #	(pt, dir1, dir2) = find_optimal_cut([ext, holes], (5,1))
 	#print alt, pt, degrees(dir1), degrees(dir2)
-	#find_cone_of_bisection([ext, holes], (4,1))
+#	find_cone_of_bisection([ext, holes], (4,1))
 	#print get_directions([ext, holes])
 	#print("Transition point: %s"%(find_transition_point([(0,1),(0,10)], 0, (8,6)),))
 	#print("Transition point: %s"%(find_best_transition_point([(0,1),(0,10)], (8,6), 0, 0),))
@@ -1038,35 +1289,32 @@ if __name__ == "__main__":
 #			(3,5),
 #			(3,4)]]
 
-	ext = [(0,0),
-			(10,0),
-			(10,10),
-			(0,10)]
+#	ext = [(0,0),
+#			(10,0),
+#			(10,10),
+#			(0,10)]
+#
+#	holes = [[(1,1),
+#			(1,4),
+#			(2,4),
+#			(2,3),
+#			(8,3),
+#			(8,8),
+#			(2,8),
+#			(2,7),
+#			(1,7),
+#			(1,9),
+#			(9,9),
+#			(9,1)],
+#			[(3,4),
+#			(3,7),
+#			(7,7),
+#			(7,4)]]
 
-	holes = [[(1,1),
-			(1,4),
-			(2,4),
-			(2,3),
-			(8,3),
-			(8,8),
-			(2,8),
-			(2,7),
-			(1,7),
-			(1,9),
-			(9,9),
-			(9,1)],
-			[(3,4),
-			(3,7),
-			(7,7),
-			(7,4)]]
-
-
-
-	P = [ext, holes]
 
 #	print combine_chains(P)
 	p1 = [(1,0), (1,1), (2,1), (2,0)]
 	p2 = [(0,0), (1,0), (1,1), (0,1)]
 	e = [(1,0), (1,1)]
 #	print combine_two_adjacent_polys(p1,p2,e)
-	print find_cut_edge(p1,p2,e[0])
+#	print find_cut_edge(p1,p2,e[0])
