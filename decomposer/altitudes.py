@@ -931,6 +931,40 @@ def combine_two_adjacent_polys(p1, p2, e):
 	return fuse
 
 
+def find_cut_edge(p1, p2, v):
+	"""
+	Find a shared edge between two polygons
+	"""
+
+	idx_1 = p1.index(v)
+	idx_2 = p2.index(v)
+
+	p1_edge_1 = [p1[idx_1], p1[(idx_1+1)%len(p1)]]
+	p1_edge_2 = [p1[idx_1], p1[(idx_1-1)%len(p1)]]
+
+	p2_edge_1 = [p2[idx_2], p2[(idx_2+1)%len(p2)]]
+	p2_edge_2 = [p2[idx_2], p2[(idx_2-1)%len(p2)]]
+
+	if p1_edge_1 == p2_edge_1: return p1_edge_1
+	elif p1_edge_1 == p2_edge_2: return p1_edge_1
+	elif p1_edge_2 == p2_edge_1: return p1_edge_2
+	elif p1_edge_2 == p2_edge_2: return p1_edge_2
+
+	print "SOMETHING WENT WORNG AND SHARED EDGE WAS NOT FOUND"
+
+
+def find_common_polys(D, v):
+
+	found_polys = []
+	for poly in D:
+		if v in poly:
+			found_polys.append(poly)
+
+	if len(found_polys) > 2:
+		"SOMETHING WRONG, MORE THAN ONE COMMON POLYS"
+
+	return found_polys[0], found_polys[1]
+
 if __name__ == "__main__":
 
 #	ext = [(0.0, 0.0),
@@ -1034,4 +1068,5 @@ if __name__ == "__main__":
 	p1 = [(1,0), (1,1), (2,1), (2,0)]
 	p2 = [(0,0), (1,0), (1,1), (0,1)]
 	e = [(1,0), (1,1)]
-	print combine_two_adjacent_polys(p1,p2,e)
+#	print combine_two_adjacent_polys(p1,p2,e)
+	print find_cut_edge(p1,p2,e[0])
