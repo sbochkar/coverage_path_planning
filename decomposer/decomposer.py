@@ -124,13 +124,10 @@ def min_alt_decompose(P):
 			continue
 		# Find optimal cut
 		#print poly, v
-		print v
-		print "=====>"
 		cut = alt.find_optimal_cut(poly, v)
 		print cut
 		# If best cut did not improve
 		if cut is None:
-			print "NO"
 			continue
 		#print poly, v, cut[0]
 		p_l, p_r = alt.perform_cut(poly,[v,cut[0]])
@@ -142,7 +139,6 @@ def min_alt_decompose(P):
 		#print D
 		#print "Finished loop"
 
-	print D
 	# Start generating additional data structures for passing to the coverage
 	# planner
 	cvx_set = [poly[0] for poly in D]

@@ -363,10 +363,8 @@ def get_directions(P):
 		P: ls
 	"""
 	
-
 	ext = P[0]
 	holes = P[1]
-
 	dirs = []
 
 	n = len(ext)
@@ -383,7 +381,7 @@ def get_directions(P):
 	for hole in holes:
 		n = len(hole)
 		for i in range(n):
-			edge = [ext[i], ext[(i+1)%n]]
+			edge = [hole[i], hole[(i+1)%n]]
 			ax, ay = edge[0]
 			bx, by = edge[1]
 
@@ -773,8 +771,7 @@ def combine_chains(P):
 	Combine the chains of a polygon to form one non-simple connected chain
 	"""
 
-	#alt, theta = get_min_altitude(P)
-	theta = 0
+	alt, theta = get_min_altitude(P)
 
 	ext = P[0]
 	ext = rotate(ext, -theta)
@@ -807,6 +804,7 @@ def combine_chains(P):
 
 				# Empty intersection means other holes weren't aligned with the
 				# hyperplane therefore no intersection is expected
+				#print("Isection Type: %s"%intersection.geom_type)
 				if intersection.is_empty: continue
 				points = get_points_from_intersection(intersection)
 				#print points
@@ -869,8 +867,7 @@ def combine_chains(P):
 			chains[cut_parameters[1]] = final_chain
 
 		#print chains
-	return chains[len(chains)-1]
-
+	return rotate(chains[len(chains)-1], theta)
 
 
 def get_points_from_intersection(intersection):
@@ -881,12 +878,57 @@ def get_points_from_intersection(intersection):
 		return [(point.x, point.y) for point in intersection]
 	elif intersection.geom_type == "LineString":
 		return [point for point in intersection.coords[:]]
+	elif intersection.geom_type == "GeometryCollection":
+		points = []
+		for item in intersection:
+			points.append(get_points_from_intersection(item))
+		return points
 
 
 def get_polygon_bounds(P):
 	shp_poly = Polygon(*P)
 	minx, miny, maxx, maxy = shp_poly.bounds
 	return minx, miny, maxx, maxy
+
+
+def combine_two_adjacent_polys(p1, p2, e):
+	"""
+	Assuming they are adjacent
+	"""
+
+	v = e[0]; w = e[1]
+
+	p1_v_idx = p1.index(v)
+	p2_v_idx = p2.index(v)
+
+	p1_w_idx = p1.index(w)
+	p2_w_idx = p2.index(w)
+
+	print("p1_v_i:%d p1_w_i:%d"%(p1_v_idx, p1_w_idx))
+	print("p2_v_i:%d p2_w_i:%d"%(p2_v_idx, p2_w_idx))
+
+	if (p1_v_idx == 0) and (p1_w_idx == 1): left_chain = p1[1:]+[p1[0]]
+	elif (p1_v_idx == 0) and (p1_w_idx == len(p1-1)): left_chain = p1[:]
+	elif p1_v_idx < p1_w_idx: left_chain = p1[p1_w_idx:]+p1[:p1_v_idx+1]
+	elif p1_w_idx < p1_v_idx: left_chain = p1[p1_v_idx:]+p1[:p1_w_idx+1]
+
+	if (p2_v_idx == 0) and (p2_w_idx == 1): right_chain = p2[1:]
+	elif (p2_v_idx == 0) and (p2_w_idx == len(p2-1)): right_chain = p2[:]
+	elif p2_v_idx < p2_w_idx: right_chain = p2[p2_w_idx:]+p2[:p2_v_idx]
+	elif p2_w_idx < p2_v_idx: right_chain = p2[p2_v_idx:]+p2[:p2_w_idx]
+
+	print left_chain
+	print right_chain
+	lr_left = LinearRing(left_chain); lr_right = LinearRing(right_chain)
+
+	if lr_left.is_ccw:
+		if lr_right.is_ccw: fuse = left_chain+right_chain
+		else: 				fuse = left_chain+right_chain[::-1]
+	else:
+		if lr_right.is_ccw: fuse = left_chain+right_chain[::-1]
+		else: 				fuse = left_chain+right_chain
+
+	return fuse
 
 
 if __name__ == "__main__":
@@ -988,4 +1030,8 @@ if __name__ == "__main__":
 
 	P = [ext, holes]
 
-	print combine_chains(P)
+#	print combine_chains(P)
+	p1 = [(1,0), (1,1), (2,1), (2,0)]
+	p2 = [(0,0), (1,0), (1,1), (0,1)]
+	e = [(1,0), (1,1)]
+	print combine_two_adjacent_polys(p1,p2,e)

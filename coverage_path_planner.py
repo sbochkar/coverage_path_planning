@@ -261,7 +261,7 @@ if __name__ == "__main__":
 	map_poly = [poly, holes]
 
 	specs = {"radius": 0.2}
-	map_num = 3
+	map_num = 5
 	coverage_path_planner(map_num, Methods.min_alt_decomp, specs)
-	coverage_path_planner(map_num, Methods.greedy_decomp, specs)
+	#coverage_path_planner(map_num, Methods.greedy_decomp, specs)
 	#coverage_path_planner(map_num, Methods.grid_gtsp, specs)
