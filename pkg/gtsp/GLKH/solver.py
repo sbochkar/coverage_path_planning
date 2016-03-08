@@ -136,3 +136,19 @@ def solve(problem_name, solver_loc, cost_matrix, cluster_array):
 		os.system("mv "+problem_name+".tour "+cur_dir+'/pkg/gtsp/solver_logs')
 
 		os.chdir(cur_dir)
+
+
+def read_tour(problem_name):
+
+	# Read in the results from the TSP solver results
+	with open('pkg/gtsp/solver_logs/'+problem_name+".tour", 'r') as f:
+		for i in range(6):
+			f.readline()
+
+		tour = []
+		str = f.readline()
+		while "EOF" not in str and "-1" not in str:
+			tour.append(int(str)-1)
+			str = f.readline()
+
+	return tour
