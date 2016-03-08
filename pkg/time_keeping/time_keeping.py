@@ -1,6 +1,7 @@
 import time
 import datetime
 
+
 def current_time():
 	"""
 	This helper function return current time in human readnable format
