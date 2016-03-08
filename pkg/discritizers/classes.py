@@ -1,5 +1,6 @@
 from math import acos
 from math import pi
+from math import sqrt
 
 
 class LineSegment:
@@ -12,8 +13,14 @@ class LineSegment:
 		vector_1 = p2[0]-p1[0], p2[1]-p1[1]
 		vector_2 = p1[0]-p2[0], p1[1]-p2[1]
 
-		dproduct_1 = vector_1[0]	# dproduct with x-axis
-		dproduct_2 = vector_2[0]	# dproduct with x-axis
+		v1_m = sqrt(vector_1[0]**2 + vector_1[1]**2)
+		v2_m = sqrt(vector_2[0]**2 + vector_2[1]**2)
+
+		v1_n = (vector_1[0]/v1_m, vector_1[1]/v2_m)
+		v2_n = (vector_2[0]/v2_m, vector_2[1]/v2_m)
+
+		dproduct_1 = v1_n[0]	# dproduct with x-axis
+		dproduct_2 = v2_n[0]	# dproduct with x-axis
 
 		# Need true angle rather than limited to [-pi, 0]
 		if vector_1[1] < 0: dir_1 = -acos(dproduct_1)
@@ -22,7 +29,7 @@ class LineSegment:
 		if vector_2[1] < 0: dir_2 = -acos(dproduct_2)
 		else: 				dir_2 = acos(dproduct_2)
 
-		self.dirs = [dir_1, dir_2]
+		self.dirs = [dir_2, dir_1]
 
 	def get_exit_info(self, dir_num):
 
@@ -40,8 +47,8 @@ class PointSegment:
 			self.dirs = [i*pi/2 for i in range(9)]
 
 	def get_exit_info(self, dir_num):
-		return (self.coord[0], self.coord[1], dirs[dir_num])
+		return (self.coord[0], self.coord[1], self.dirs[dir_num])
 
 	def get_entrance_info(self, dir_num):
-		return (self.coord[0], self.coord[1], dirs[dir_num])
+		return (self.coord[0], self.coord[1], self.dirs[dir_num])
 

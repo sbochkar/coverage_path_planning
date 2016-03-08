@@ -1,6 +1,6 @@
 
 
-def min_alt_decompose(P):
+def decompose(P):
 	"""
 	Min altitude decomposition.
 
@@ -13,10 +13,13 @@ def min_alt_decompose(P):
 	"""
 
 	min_alt, theta = alt.get_min_altitude(P)
-	D, active_verts = alt.combine_chains(P, theta)
+	print("Min Alt: %2f, Theta: %2f"%(min_alt, 180*theta/3.14))
+	D, active_verts = chain_combination.combine_chains(P, theta)
+
+	print("After chain combination: %s"%D)
 	#R = alt.find_reflex_vertices(D)
 	#print("Reflex set: %s"%(R,))
-	cut = alt.find_optimal_cut(poly, v)
+	#cut = alt.find_optimal_cut(poly, v)
 
 #	D = [[D, []]]
 #	while R:
@@ -45,3 +48,13 @@ def min_alt_decompose(P):
 #		D.append([p_r, []])
 #		#print D
 #		#print "Finished loop"
+
+if __name__ == '__main__':
+	if __package__ is None:
+		import os, sys
+		sys.path.insert(0, os.path.abspath("../.."))
+		from aux.geometry import rotation
+		import reflex
+else:
+	from ...aux.altitudes import altitude as alt
+	from ...poly_operations.others import chain_combination
