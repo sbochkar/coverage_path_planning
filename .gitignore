@@ -1,4 +1,3 @@
 *.pyc
 old
-__pycache__
-gtsp_related
+*.tour
