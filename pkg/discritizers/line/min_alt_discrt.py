@@ -1,6 +1,7 @@
 from shapely.geometry import LinearRing
 from shapely.geometry import LineString
 from shapely.geometry import Polygon
+from shapely import affinity
 
 
 def discritize_set(D, width):
@@ -67,12 +68,16 @@ def populate_with_lines(P, width, theta):
 		offset_hole = lr_hole.parallel_offset(width, side='left', join_style=1)
 		lr_new_holes.append(offset_hole)
 
-
-	shrunk_polygon = Polygon(lr_ext, lr_new_holes)
+	if offset_ext.is_empty:
+		print offset_ext
+		print("Line generation ERROR: Shrunk polygon is not valid")
+		return []
+	
+	shrunk_polygon = Polygon(offset_ext, lr_new_holes)
 
 	if not shrunk_polygon.is_valid:
 		print("Line generation ERROR: Shrunk polygon is not valid")
-		return None
+		return []
 
 
 	minx, miny, maxx, maxy = shrunk_polygon.bounds
@@ -89,21 +94,28 @@ def populate_with_lines(P, width, theta):
 
 		# Handle each type of intersection separatly
 		if intersection.geom_type == "Point":
-			segments.append(classes.PointSegment((intersection.x, intersection.y)))
+			new_coord = rotation.rotate_points(intersection.coords[:], theta)
+			segments.append(classes.PointSegment(*new_coord))
 		elif intersection.geom_type == "LineString":
-			segments.append(classes.LineSegment(intersection.coords[:]))
+			# Rotate back and append
+			new_coords = rotation.rotate_points(intersection.coords[:], theta)
+			segments.append(classes.LineSegment(new_coords))
 		elif intersection.geom_type == "MultiLineString":
 			for line in intersection:
-				segments.append(classes.LineSegment(line.coords[:]))
+				new_coords = rotation.rotate_points(line.coords[:], theta)
+				segments.append(classes.LineSegment(new_coords))
 		elif intersection.geom_type == "GeometricCollection":
 			for element in intersection:
 				if element.geom_type == "Point":
-					segments.append(classes.PointSegment((element.x, element.y)))
+					new_coord = rotation.rotate_points(element.coords[:], theta)
+					segments.append(classes.PointSegment(*new_coord))
 				elif element.geom_type == "LineString":
-					segments.append(classes.LineSegment(element.coords[:]))
+					new_coords = rotation.rotate_points(element.coords[:], theta)
+					segments.append(classes.LineSegment(new_coords))
 				elif element.geom_type == "MultiLineString":
 					for line in element:
-						segments.append(classes.LineSegment(line.coords[:]))
+						new_coords = rotation.rotate_points(line.coords[:], theta)
+						segments.append(classes.LineSegment(new_coords))
 
 		cur_x += width
 

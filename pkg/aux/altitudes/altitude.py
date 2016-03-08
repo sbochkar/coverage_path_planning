@@ -40,7 +40,7 @@ def get_altitude(P, theta):
 		altitude: A scalar value of the altitude
 	"""	
 
-
+	#print("Starting with theta:%f\n"%theta)
 	P = rotation.rotate_polygon(P, -theta)
 	adj = ae.get_edge_adjacency_as_dict(P)
 
@@ -115,8 +115,8 @@ def resolve_local_equality(adj_list, v, prev):
 	if prev in adj:
 		adj.remove(prev)
 
-	x_v, x_y = v
-	x, y = adj[0]
+	x_v, x_y = v[1]
+	x, y = adj[0][1]
 
 	if x > x_v:
 		return 1
