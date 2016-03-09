@@ -33,8 +33,8 @@ def combine_chains(P, theta):
 			# Initialize up and down arrays
 			up = []; down = []
 
-			for j in range(len(chains)):
-				print chains[j]
+			for j in range(i, len(chains)):
+				print("Chain tested with hyperplane: %s"%chains[j])
 				intersection = hyperplane.intersection(LinearRing(chains[j]))
 
 				# Empty intersection means other holes weren't aligned with the
@@ -62,18 +62,20 @@ def combine_chains(P, theta):
 			# Sort the up and down arrays
 			up = sorted(up, key=lambda elem: elem[0][1])
 			down = sorted(down, key=lambda elem: elem[0][1])
-			#print("Up: %s"%up)
-			#print("Down: %s"%down)
+			print("Up: %s"%up)
+			print("Down: %s"%down)
 			# If closest points is hole itself, go to the next reflex vertex
 			if (up[1][1] == i) and (down[-2][1] == i): continue
 			if up[1][1] == i: cut_parameters = down[-2]; break
 			if down[-2][1] == i: cut_parameters = up[1]; break
 			cut_parameters = up[1]; break # Maybe need to choose smartly
 
+		print("Cut Param: %s"%(cut_parameters,))
 		#print("Cutting from: %s to %s"%(v, cut_parameters))
 		orig_chain = LineString(chain+[chain[0]])
 		dest_chain = LineString(chains[cut_parameters[1]]+[chains[cut_parameters[1]][0]])
-		#print orig_chain, dest_chain
+		print("Orig chain: %s"%orig_chain)
+		print("Dest chain: %s"%dest_chain)
 
 		distance_to_v = orig_chain.project(Point(v[1]))
 		distance_to_w = dest_chain.project(Point(cut_parameters[0]))
@@ -81,20 +83,28 @@ def combine_chains(P, theta):
 		#print("Orig_l: %2f, Dist_l: %2f"%(orig_chain.length, dest_chain.length))
 
 		if distance_to_v == 0:
-			orig_chain_1 = []; orig_chain_2 = orig_chain.coords[:]
+			orig_chain_1 = orig_chain.coords[:]
+			orig_chain_2 = [];
 		else:
 			orig_chain_1, orig_chain_2 = cut(orig_chain, distance_to_v)
+			orig_chain_1 = orig_chain_1.coords[:]
+			orig_chain_2 = orig_chain_2.coords[:]
+
 		if distance_to_w == 0:
-			dest_chain_1 = []; dest_chain_2 = dest_chain.coords[:]
+			dest_chain_1 = [];
+			dest_chain_2 = dest_chain.coords[:]
 		else:
 			dest_chain_1, dest_chain_2 = cut(dest_chain, distance_to_w)
+			dest_chain_1 = dest_chain_1.coords[:]
+			dest_chain_2 = dest_chain_2.coords[:-1]
 			#print cut(dest_chain, distance_to_w)
 
 		#if LinearRing(dest_chain).is_ccw:
-		final_chain = dest_chain_1.coords[:]+\
-						orig_chain_2.coords[:-1]+\
-						orig_chain_1.coords[:]+\
-						dest_chain_2.coords[:-1]
+		final_chain = orig_chain_1+dest_chain_2+dest_chain_1+orig_chain_2
+#		final_chain = dest_chain_1[:]+\
+#						orig_chain_2[:-1]+\
+#						orig_chain_1[:]+\
+#						dest_chain_2[:-1]
 
 		# Now modify the chains array accoridngly to propagate the fusion method
 		if cut_parameters[1] == (len(chains)-1):

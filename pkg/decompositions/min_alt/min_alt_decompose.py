@@ -17,8 +17,8 @@ def decompose(P):
 	D, active_verts = chain_combination.combine_chains(P, theta)
 
 	print("After chain combination: %s"%D)
-	#R = alt.find_reflex_vertices(D)
-	#print("Reflex set: %s"%(R,))
+	R = reflex.find_reflex_vertices(D)
+	print("Reflex set: %s"%(R,))
 	#cut = alt.find_optimal_cut(poly, v)
 
 #	D = [[D, []]]
@@ -49,6 +49,8 @@ def decompose(P):
 #		#print D
 #		#print "Finished loop"
 
+	return D
+
 if __name__ == '__main__':
 	if __package__ is None:
 		import os, sys
@@ -58,3 +60,4 @@ if __name__ == '__main__':
 else:
 	from ...aux.altitudes import altitude as alt
 	from ...poly_operations.others import chain_combination
+	from ...poly_operations.others import reflex

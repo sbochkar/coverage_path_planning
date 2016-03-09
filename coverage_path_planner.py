@@ -27,7 +27,7 @@ class Robot:
 		self.dynamics = dynamics
 
 
-GLKH_LOCATION = "/home/sbochkar/misc/GLKH-1.0/"
+GLKH_LOCATION = "/home/stan/misc/GLKH-1.0/"
 
 
 def coverage_path_planner(map_num, robot, method):
@@ -97,10 +97,11 @@ def coverage_path_planner(map_num, robot, method):
 		print("[%18s] Invoking min_alt decomposition."%tk.current_time())
 		decomposition = min_alt_decompose.decompose(P)
 		print("[%18s] Finished min_alt decomposition."%tk.current_time())
+		print decomposition
 
-#		print("[%18s] Forming an adjacency matrix for polygons."%tk.current_time())
-#		adjacency_matrix = adjacency.get_adjacency_as_matrix(decomposition)
-#		print("[%18s] Adjacency matrix complete."%tk.current_time())
+		print("[%18s] Forming an adjacency matrix for polygons."%tk.current_time())
+		adjacency_matrix = adjacency.get_adjacency_as_matrix(decomposition)
+		print("[%18s] Adjacency matrix complete."%tk.current_time())
 #
 #		print("[%18s] Populating the free space with segments."%tk.current_time())
 #		segments = min_alt_discrt.discritize_set(decomposition, width)
@@ -126,7 +127,7 @@ def coverage_path_planner(map_num, robot, method):
 		ax = splot.init_axis()
 
 		print("[%18s] Plotting decomposition."%tk.current_time())
-		splot.plot_decomposition(ax, decomposition, adjacency_matrix)
+#		splot.plot_decomposition(ax, decomposition, adjacency_matrix)
 
 #		print("[%18s] Plotting sampling."%tk.current_time())
 #		splot.plot_samples(ax, segments)
@@ -144,4 +145,4 @@ def coverage_path_planner(map_num, robot, method):
 if __name__ == "__main__":
 
 	robot = Robot(0.2, "dubins")
-	coverage_path_planner(3, robot, 0)
+	coverage_path_planner(3, robot, 1)
