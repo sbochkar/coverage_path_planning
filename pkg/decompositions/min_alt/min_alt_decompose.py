@@ -19,7 +19,10 @@ def decompose(P):
 	print("After chain combination: %s"%D)
 	R = reflex.find_reflex_vertices(D)
 	print("Reflex set: %s"%(R,))
-	#cut = alt.find_optimal_cut(poly, v)
+
+	# Just make one cut
+	v = R.pop()
+	cut = cuts.find_optimal_cut(D, v)
 
 #	D = [[D, []]]
 #	while R:
@@ -59,5 +62,6 @@ if __name__ == '__main__':
 		import reflex
 else:
 	from ...aux.altitudes import altitude as alt
+	from ...decompositions.min_alt import cuts
 	from ...poly_operations.others import chain_combination
 	from ...poly_operations.others import reflex
