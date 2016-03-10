@@ -28,22 +28,22 @@ def combine_chains(P, theta):
 		for v in R:
 			#print("Reflex v: %s"%(v,))
 			hyperplane = LineString([(v[1][0],maxy), (v[1][0],miny)])
-			print("Hyperplane: %s"%hyperplane)
+			#print("Hyperplane: %s"%hyperplane)
 
 			# Initialize up and down arrays
 			up = []; down = []
 
 			for j in range(i, len(chains)):
-				print("Chain tested with hyperplane: %s"%chains[j])
+				#print("Chain tested with hyperplane: %s"%chains[j])
 				intersection = hyperplane.intersection(LinearRing(chains[j]))
 
 				# Empty intersection means other holes weren't aligned with the
 				# hyperplane therefore no intersection is expected
 				#print("Isection Type: %s"%intersection.geom_type)
 				if intersection.is_empty: continue
-				print("Intersection: %s"%intersection)
+				#print("Intersection: %s"%intersection)
 				points = get_points_from_intersection(intersection)
-				print("Points from intersection: %s"%points)
+				#print("Points from intersection: %s"%points)
 
 				# Insert intersections into respective arrays
 				for x, y in points:
@@ -62,20 +62,20 @@ def combine_chains(P, theta):
 			# Sort the up and down arrays
 			up = sorted(up, key=lambda elem: elem[0][1])
 			down = sorted(down, key=lambda elem: elem[0][1])
-			print("Up: %s"%up)
-			print("Down: %s"%down)
+			#print("Up: %s"%up)
+			#print("Down: %s"%down)
 			# If closest points is hole itself, go to the next reflex vertex
 			if (up[1][1] == i) and (down[-2][1] == i): continue
 			if up[1][1] == i: cut_parameters = down[-2]; break
 			if down[-2][1] == i: cut_parameters = up[1]; break
 			cut_parameters = up[1]; break # Maybe need to choose smartly
 
-		print("Cut Param: %s"%(cut_parameters,))
+		#print("Cut Param: %s"%(cut_parameters,))
 		#print("Cutting from: %s to %s"%(v, cut_parameters))
 		orig_chain = LineString(chain+[chain[0]])
 		dest_chain = LineString(chains[cut_parameters[1]]+[chains[cut_parameters[1]][0]])
-		print("Orig chain: %s"%orig_chain)
-		print("Dest chain: %s"%dest_chain)
+		#print("Orig chain: %s"%orig_chain)
+		#print("Dest chain: %s"%dest_chain)
 
 		distance_to_v = orig_chain.project(Point(v[1]))
 		distance_to_w = dest_chain.project(Point(cut_parameters[0]))
@@ -113,8 +113,8 @@ def combine_chains(P, theta):
 			chains[cut_parameters[1]] = final_chain
 
 		active_verts.append(v)
-		print("Active verts: %s"%active_verts)
-		print("Final chain: %s"%final_chain)
+		#print("Active verts: %s"%active_verts)
+		#print("Final chain: %s"%final_chain)
 	return rotation.rotate_polygon([chains[len(chains)-1],[]], theta), active_verts
 
 
