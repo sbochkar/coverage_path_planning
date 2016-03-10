@@ -9,7 +9,6 @@ def get_adjacency_as_matrix(P_set):
 	"""
 
 	adj_matrix = [[None for i in range(len(P_set))] for i in range(len(P_set))]
-
 	# Test each pair of polys and determine if they are adjacent
 	for p1_idx in range(len(P_set)):
 		for p2_idx in range(p1_idx+1, len(P_set)):
