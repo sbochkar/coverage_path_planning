@@ -13,16 +13,21 @@ def decompose(P):
 	"""
 
 	min_alt, theta = alt.get_min_altitude(P)
-	print("Min Alt: %2f, Theta: %2f"%(min_alt, 180*theta/3.14))
-	D, active_verts = chain_combination.combine_chains(P, theta)
+	#print("Min Alt: %2f, Theta: %2f"%(min_alt, 180*theta/3.14))
+	P_fused, active_verts = chain_combination.combine_chains(P, theta)
 
-	print("After chain combination: %s"%D)
-	R = reflex.find_reflex_vertices(D)
+	#print("After chain combination: %s"%D)
+	R = reflex.find_reflex_vertices(P_fused)
 	print("Reflex set: %s"%(R,))
 
-	# Just make one cut
+	# For bring up testing, make just one cut
+	# Since D is one chain, we can just pass D. However for later passes, need to find a polygon in D before passing to this function
 	v = R.pop()
-	cut = cuts.find_optimal_cut(D, v)
+	print P_fused
+	cut = cuts.find_optimal_cut(P_fused, v)
+	return [P_fused]
+#	print("Active verts: %s"%(active_verts,))
+#	cut = alt.find_optimal_cut(poly, v)
 
 #	D = [[D, []]]
 #	while R:
@@ -52,7 +57,7 @@ def decompose(P):
 #		#print D
 #		#print "Finished loop"
 
-	return D
+
 
 if __name__ == '__main__':
 	if __package__ is None:
