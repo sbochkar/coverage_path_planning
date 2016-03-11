@@ -1,6 +1,14 @@
 from shapely.geometry import Polygon
+from shapely.geometry import Point
 from shapely.geometry import LinearRing
+from shapely.geometry import LineString
 from math import sqrt
+from math import atan2
+from math import pi
+from math import cos
+from math import sin
+import numpy as np
+import visilibity as vis # Need to place somewhere
 
 
 def find_optimal_cut(P, v):
@@ -14,11 +22,12 @@ def find_optimal_cut(P, v):
 	min_altitude, theta = alt.get_min_altitude(P)
 
 	s = find_cut_space(P, v)
+
 	min_altitude_idx = None
 
 	for si in s:
 		# Process each edge si, have to be cw
-		lr_si = LinearRing([v]+si)
+		lr_si = LinearRing([v[1]]+si)
 		if lr_si.is_ccw:
 			#print lr_si
 			#print lr_si.is_ccw
@@ -27,11 +36,12 @@ def find_optimal_cut(P, v):
 
 		cut_point = si[0]
 		#print P, v, cut_point
-		p_l, p_r = perform_cut(P, [v, cut_point])
+		p_l, p_r = perform_cut(P, [v[1], cut_point])
 		#print p_l, p_r
 
 		dirs_left = directions.get_directions_set([p_l, []])
 		dirs_right = directions.get_directions_set([p_r, []])
+
 		#print dirs_left
 		#print list(degrees(dir) for dir in dirs_left)
 		#print get_altitude([p_l,[]], 3.5598169831690223)
@@ -40,14 +50,15 @@ def find_optimal_cut(P, v):
 		# Look for all transition points
 		for dir1 in dirs_left:
 			for dir2 in dirs_right:
-				tp = find_best_transition_point(si, v, dir1, dir2)
+				tp = find_best_transition_point(si, v[1], dir1, dir2)
 				pois.append((tp, dir1, dir2))
 
 	# Evaluate all transition points
 	for case in pois:
-		p_l, p_r = perform_cut(P, [v, case[0]])
+		p_l, p_r = perform_cut(P, [v[1], case[0]])
 		a_l = alt.get_altitude([p_l, []], case[1])
 		a_r = alt.get_altitude([p_r, []], case[2])
+
 		if a_l+a_r<=min_altitude:
 			min_altitude = a_l+a_r
 			min_altitude_idx = case
@@ -62,71 +73,37 @@ def find_cut_space(P, v):
 	Generate the cut space at v using Visilibity library.
 	"""
 
-
+	# Used for visilibity library
 	epsilon = 0.0000001
 
-	# Using shapely library, compute the cone of bisection
-#	shp_polygon = shapely.geometry.polygon.orient(Polygon(*P))
-#	shp_cone 	= shapely.geometry.polygon.orient(Polygon(find_cone_of_bisection(P, v)))
-
-	shp_polygon = Polygon(*P)
-	#print("Polygon: %s"%shp_polygon)
 
 	cone_of_bisection = find_cone_of_bisection(P, v)
-	shp_cone 	= Polygon(find_cone_of_bisection(P, v))
-	#print("Cone of bisection: %s"%cone_of_bisection)
+	cone_of_bisection = Polygon(cone_of_bisection)
 
+	P = Polygon(*P)
+	intersection = cone_of_bisection.intersection(P)
+	print("Intersection: %s"%intersection)
 
-	shp_intersection = shp_cone.intersection(shp_polygon)
-	#print("Intersection: %s"%shp_intersection)
-
+	# Debug visualization
+	# Plot the polygon itself
 #	import pylab as p
-#
-#	# Plot the polygon itself
-#	x, y = shp_polygon.exterior.xy
+#	x, y = P.exterior.xy
 #	p.plot(x, y)
-#	x, y = shp_cone.exterior.xy
+#	x, y = cone_of_bisection.exterior.xy
 #	p.plot(x, y)
-#	x, y = shp_intersection.exterior.xy
+#	x, y = intersection.exterior.xy
 #	p.plot(x, y)
 #	p.show()
 
-	# plot the intersection of the cone with the polygon
-	#intersection_x, intersection_y = shp_intersection.exterior.xy
-	#p.plot(intersection_x, intersection_y)
-
-	#for interior in shp_intersection.interiors:
-	#	interior_x, interior_y = interior.xy
-	#	p.plot(interior_x, interior_y)
-
-	# Plot the reflex vertex
-	#p.plot([observer.x()], [observer.y()], 'go')
-
-	#p.plot(point_x, point_y)
-
-
-
-	if shp_intersection.geom_type == "MultiPolygon":
-		shp_intersection = shp_intersection[0]
-		#print shp_intersection
-	elif shp_intersection.geom_type == "GeometryCollection":
-		for shape in shp_intersection:
-			if shape.geom_type == "Polygon":
-				shp_intersection = shape
-				break
-	else:
-		#shp_intersection = shapely.geometry.polygon.orient(shp_intersection)	
-		shp_intersection = (shp_intersection)	
-	#shp_intersection = shapely.geometry.polygon.orient(shp_cone.intersection(shp_polygon))
-
+	intersection = get_closest_intersecting_polygon(intersection, v)
 	#Using the visilibity library, define the reflex vertex
-	observer = vis.Point(*v)
+	observer = vis.Point(*v[1])
 
 	# Define the walls of intersection in Visilibity domain
 	# To put into standard form, do this
-	exterior_coords = shp_intersection.exterior.coords[:-1]
-	x_min_idx, x_min = min(enumerate(exterior_coords), key=itemgetter(1))
-	exterior_coords = exterior_coords[7:]+exterior_coords[:7]
+	exterior_coords = intersection.exterior.coords[:-1]
+	x_min_idx, x_min = min(enumerate(exterior_coords), key=lambda x: x[0])
+	exterior_coords = exterior_coords[x_min_idx:]+exterior_coords[:x_min_idx]
 
 	vis_intersection_wall_points = []
 	for point in exterior_coords:
@@ -139,7 +116,7 @@ def find_cut_space(P, v):
 
 	# Define the holes of intersection in Visilibity domain
 	vis_intersection_holes = []
-	for interior in shp_intersection.interiors:
+	for interior in intersection.interiors:
 		vis_intersection_hole_points = []
 		for point in list(interior.coords):
 			vis_intersection_hole_points.append(vis.Point(*point))
@@ -184,13 +161,14 @@ def find_cut_space(P, v):
 	# Now we need to find edges of visbility polygon which are on the boundary
 
 
-	shp_visib = shapely.geometry.polygon.orient(Polygon(zip(point_x, point_y)),-1)
+	#shp_visib = shapely.geometry.polygon.orient(Polygon(zip(point_x, point_y)),-1)
+	shp_visib = Polygon(zip(point_x, point_y))
 	shp_ls_visib = LineString(shp_visib.exterior.coords[:])
 	shp_pl_visib = shp_ls_visib.buffer(0.001)
 
-	shp_ls_exterior = LineString(shp_polygon.exterior)
+	shp_ls_exterior = LineString(P.exterior)
 	shp_ls_interior = []
-	for interior in shp_polygon.interiors:
+	for interior in P.interiors:
 	 	shp_ls_interior.append(LineString(interior))
 
 	# Start adding cut space on the exterior
@@ -226,7 +204,7 @@ def find_cut_space(P, v):
 	#print cut_space
 
 	# Start adding cut space on the holes
-	for interior in shp_polygon.interiors:
+	for interior in P.interiors:
 		common_items = interior.intersection(shp_ls_visib)
 		if common_items.geom_type == "GeometryCollection":
 #			print common_items
@@ -240,16 +218,16 @@ def find_cut_space(P, v):
 	#print cut_space
 
 	# PLOTTING
-#	import pylab as p
-#
-#	# Plot the polygon itself
-#	x, y = shp_polygon.exterior.xy
-#	p.plot(x, y)
-#
-#	# plot the intersection of the cone with the polygon
-#	intersection_x, intersection_y = shp_intersection.exterior.xy
-#	p.plot(intersection_x, intersection_y)
-#
+	import pylab as p
+
+	# Plot the polygon itself
+	x, y = P.exterior.xy
+	p.plot(x, y)
+
+	# plot the intersection of the cone with the polygon
+	intersection_x, intersection_y = intersection.exterior.xy
+	p.plot(intersection_x, intersection_y)
+
 #	#for interior in shp_intersection.interiors:
 #	#	interior_x, interior_y = interior.xy
 #	#	p.plot(interior_x, interior_y)
@@ -259,9 +237,81 @@ def find_cut_space(P, v):
 #
 #	p.plot(point_x, point_y)
 #
-#	p.show()
+	p.show()
 	#print cut_space
 	return cut_space
+
+
+def get_closest_intersecting_polygon(intersection, v):
+
+
+	# Need to check the type of intersection
+	if intersection.is_empty:
+		print("ERROR: intersection of cone with polygon is empty")
+		return None
+	elif intersection.geom_type == "Point": 
+		print("ERROR: intersection of cone with polygon is a point")
+		return None
+	elif intersection.geom_type == "LineString":
+		print("ERROR: intersection of cone with polygon is a line")
+		return None
+	elif intersection.geom_type == "MultiLineString":
+		print("ERROR: intersection of cone with polygon is a multiline")
+		return None
+	elif intersection.geom_type == "Polygon":
+		return intersection
+	elif intersection.geom_type == "MultiPolygon":
+		for poly in intersection:
+			if not poly.intersection(v[1]).is_empty:
+				return poly
+	elif intersection.geom_type == "GeometryCollection":
+		for shape in intersection:
+			result =  get_closest_intersecting_polygon(shape, v)
+			if result is not None:
+				return result
+
+
+def find_transition_point(s_orig, theta, cut_origin):
+	"""
+	Returns transition for a polygon, a cut space segment, and a direction of
+		altitude
+
+	Function will perform a series of geometric functions to return a transition
+		point.
+
+	Args:
+		s: a straight line segment
+		theta: direction w.r.t. x-axis
+		cut_origin: vertex of origin of cone of bisection
+	Returns:
+		trans_point: a transition point
+	"""
+
+	s = rotate(s_orig, -theta)
+	cut_origin = rotate([cut_origin], -theta)[0]
+
+	y_s_min_idx, y_s_min = min(enumerate(s), key=itemgetter(1))
+	y_s_max_idx, y_s_max = max(enumerate(s), key=itemgetter(1))
+
+	x_s_min_idx, x_s_min = min(enumerate(s), key=itemgetter(0))
+	x_s_max_idx, x_s_max = max(enumerate(s), key=itemgetter(0))
+
+	# Check the easy cases first
+	if y_s_min[1] >= cut_origin[1]:
+		return s_orig[y_s_min_idx]
+	elif y_s_max[1] <= cut_origin[1]:
+		return s_orig[y_s_max_idx]
+	else:
+		# Find the intersection which corresponds to transition point
+		hyperplane = LineString([(x_s_min[0], cut_origin[1]), (cut_origin[0], cut_origin[1])])
+		cut_segment = LineString(s)
+		transition_point = cut_segment.intersection(hyperplane)
+
+		if not transition_point:
+			print "Not suppose to happen"
+		return rotate([transition_point.coords[0]], theta)[0]
+
+
 
 
 def find_cone_of_bisection(P, v):
@@ -269,39 +319,31 @@ def find_cone_of_bisection(P, v):
 	Return a polygon representing the cone of bisection
 	"""
 
-	# Compute an approximationg to the radius of the cone of bisection
-	shp_polygon = Polygon(P[0], P[1])
-	#print("Polygon: %s"%shp_polygon)
-
-	min_x, min_y, max_x, max_y = shp_polygon.bounds
-	rad = sqrt((max_x-min_x)**2+(max_y-min_y)**2)
 
 	ext = P[0]
 	holes = P[1]
 
+	Pp = Polygon(P[0], P[1])
+
+	minx, miny, maxx, maxy = Pp.bounds
+	rad = sqrt((maxx-minx)**2+(maxy-miny)**2)	# "Dimater" of the polygon
+
 	# Form an adjacency list for easy access to adjacent edges
-	adjacency_dict = adj.get_adjacency_as_matrix([P,[]])
+	adj = adj_e.get_edge_adjacency_as_dict(P)
 
 	#Find adjacent edges of v
-	v_l_id = adjacency_dict[v][1]; 	v_r_id = adjacency_dict[v][0]
-	v_l = v_l_id[1]; v_r = v_r_id[1]
-	print("v: %s"%(v,))
-	print("v_l: %s, v_r: %s"%(v_l, v_r))
+	v_l = adj[v][1][1]; v_r = adj[v][0][1]
 
 	# Find the angle of v_l with the x-axis
-	theta_l = atan2(v_l[1]-v[1], v_l[0]-v[0])
-	theta_r = atan2(v_r[1]-v[1], v_r[0]-v[0])
-	print("Th_l: %2f, Th_r: %2f"%(degrees(theta_l), degrees(theta_r)))
+	theta_l = atan2(v_l[1]-v[1][1], v_l[0]-v[1][0])
+	theta_r = atan2(v_r[1]-v[1][1], v_r[0]-v[1][0])
 
 	# Consider several cases which will determine the measurement for the cone of bisection
-	#print degrees(theta_l), degrees(theta_r)
 	if theta_l < 0 and theta_r < 0:
 		angle = abs(theta_l-theta_r)
 		orientation = pi+theta_l+angle/2
-		#print degrees(angle), degrees(orientation)
 	elif theta_l <= 0 and theta_r >= 0:
 		angle = theta_r-theta_l
-		#orientation = pi+theta_l+angle/2
 		orientation = pi+theta_l+angle/2
 	elif theta_l > 0 and theta_r > 0:
 		angle = theta_r-theta_l
@@ -309,26 +351,26 @@ def find_cone_of_bisection(P, v):
 	elif theta_l > 0 and theta_r < 0:
 		angle = 2*pi-(theta_l-theta_r)
 		orientation = pi+theta_l+angle/2
+	else:
+		print("ERROR: CONE OF BISECTION<: IF DID NTO CAPTURE")
 
-	#print("Angle: %f, Orientation: %f"%(degrees(angle),degrees(orientation)))
 	p = []
 
-	p.append(v)
-	import numpy as np
+	p.append(v[1])
 	for i in np.arange(orientation-angle/2,orientation+angle/2,0.1):
 		x = rad*cos(i)
 		y = rad*sin(i)
 
-		new_x = v[0]+x
-		new_y = v[1]+y
+		new_x = v[1][0]+x
+		new_y = v[1][1]+y
 
 		p.append((new_x, new_y))
 
 	x = rad*cos(orientation+angle/2)
 	y = rad*sin(orientation+angle/2)
 
-	new_x = v[0]+x
-	new_y = v[1]+y
+	new_x = v[1][0]+x
+	new_y = v[1][1]+y
 
 	p.append((new_x, new_y))
 
@@ -434,6 +476,32 @@ def perform_cut(P, e):
 	#print p_r
 	return p_l, p_r
 
+def cut(line, distance):
+	"""
+	Splicing a line
+	Credits go to author of the shapely manual
+	"""
+	# Cuts a line in two at a distance from its starting point
+	if distance <= 0.0 or distance >= line.length:
+		return [LineString(line)]
+	coords = list(line.coords)
+	for i, p in enumerate(coords):
+		pd = line.project(Point(p))
+		if pd == distance:
+			return [
+				LineString(coords[:i+1]),
+				LineString(coords[i:])]
+		if pd > distance:
+			cp = line.interpolate(distance)
+			return [
+				LineString(coords[:i] + [(cp.x, cp.y)]),
+				LineString([(cp.x, cp.y)] + coords[i:])]
+		if i == len(coords)-1:
+			cp = line.interpolate(distance)
+			return [
+				LineString(coords[:i] + [(cp.x, cp.y)]),
+				LineString([(cp.x, cp.y)] + coords[i:])]
+
 
 if __name__ == '__main__':
 	if __package__ is None:
@@ -446,4 +514,4 @@ else:
 	from ...poly_operations.others import chain_combination
 	from ...poly_operations.others import reflex
 	from ...poly_operations.others import directions
-	from ...poly_operations.others import adjacency as adj
+	from ...poly_operations.others import adjacency_edges as adj_e
