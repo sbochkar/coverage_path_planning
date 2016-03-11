@@ -18,14 +18,25 @@ def decompose(P):
 
 	#print("After chain combination: %s"%D)
 	R = reflex.find_reflex_vertices(P_fused)
-	print("Reflex set: %s"%(R,))
+	#print("Reflex set: %s"%(R,))
 
 	# For bring up testing, make just one cut
 	# Since D is one chain, we can just pass D. However for later passes, need to find a polygon in D before passing to this function
-	v = R.pop()
-	print P_fused
-	cut = cuts.find_optimal_cut(P_fused, v)
-	return [P_fused]
+	D = P_fused
+	while R:
+		v = R.pop()
+		cut = cuts.find_optimal_cut(P_fused, v)
+		print("Ref: %s"%(v[1],))
+		print("Cut: %s"%(cut,))
+		#if cut or cut is not None: # Not empty
+			#p_l, p_r = cuts.perform_cut(D, [v[1], cut[0]])
+			#print("Left poly: %s"%(p_l,))
+			#print("Right poly: %s"%(p_r,))
+			#D.append([p_l, []])
+			#D.append([p_r, []])
+
+	#print D
+	return D
 #	print("Active verts: %s"%(active_verts,))
 #	cut = alt.find_optimal_cut(poly, v)
 
