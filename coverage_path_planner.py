@@ -97,6 +97,7 @@ def coverage_path_planner(map_num, robot, method):
 		print("[%18s] Invoking min_alt decomposition."%tk.current_time())
 		decomposition = min_alt_decompose.decompose(P)
 		print("[%18s] Finished min_alt decomposition."%tk.current_time())
+		print decomposition
 
 		print("[%18s] Forming an adjacency matrix for polygons."%tk.current_time())
 		adjacency_matrix = adjacency.get_adjacency_as_matrix(decomposition)
@@ -144,4 +145,4 @@ def coverage_path_planner(map_num, robot, method):
 if __name__ == "__main__":
 
 	robot = Robot(0.2, "dubins")
-	coverage_path_planner(8, robot, 1)
+	coverage_path_planner(7, robot, 1)

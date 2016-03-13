@@ -60,12 +60,13 @@ def find_optimal_cut(P, v):
 		a_l = alt.get_altitude([p_l, []], case[1])
 		a_r = alt.get_altitude([p_r, []], case[2])
 
-		if a_l+a_r<=min_altitude:
+		if round(a_l+a_r, 5) <= round(min_altitude, 5):
 			min_altitude = a_l+a_r
 			min_altitude_idx = case
 		
 
 	#print min_altitude, min_altitude_idx[0], degrees(min_altitude_idx[1]), degrees(min_altitude_idx[2])
+	print min_altitude_idx
 	return min_altitude_idx
 
 
@@ -80,6 +81,8 @@ def find_cut_space(P, v):
 	c_of_b = Polygon(c_of_b)
 
 	P = Polygon(*P)
+	print P
+	#print c_of_b
 	intersection = c_of_b.intersection(P)
 #	print("Intersection: %s"%intersection)
 
@@ -99,15 +102,15 @@ def find_cut_space(P, v):
 
 	# Debug visualization
 	# Plot the polygon itself
-#	import pylab as p
-#	x, y = P.exterior.xy
-#	p.plot(x, y)
-#	x, y = c_of_b.exterior.xy
-#	p.plot(x, y)
-#	x, y = intersection.exterior.xy
-#	p.plot(x, y)
-#	p.plot(point_x, point_y)
-#	p.show()
+	import pylab as p
+	x, y = P.exterior.xy
+	p.plot(x, y)
+	x, y = c_of_b.exterior.xy
+	p.plot(x, y)
+	p.plot(point_x, point_y)
+	p.show()
+	x, y = intersection.exterior.xy
+	p.plot(x, y)
 
 
 	# At this point, we have visibility polygon.
@@ -360,52 +363,74 @@ def perform_cut(P, e):
 	Split up P into two polygons by cutting along e
 	"""
 
+	print("Cut edge: %s"%(e,))
 	v = e[0]
 	w = e[1]
 	chain = LineString(P[0]+[P[0][0]])
+	print("Chain to be cut: %s"%(chain,))
+	print("Chain length: %7f"%chain.length)
 
 	distance_to_v = chain.project(Point(v))
 	distance_to_w = chain.project(Point(w))
-#	print distance_to_v, distance_to_w, e
+	print("D_to_w: %7f, D_to_v: %2f"%(distance_to_w, distance_to_v))
+
 	if distance_to_w > distance_to_v:
-		if distance_to_v == 0:
+		if round(distance_to_w, 4) >= round(chain.length, 4):
+	#		print("Special case")
+			distance_to_v = chain.project(Point(v))
+			left_chain, right_chain = cut(chain, distance_to_v)
+
+			p_l = left_chain.coords[:]
+			p_r = right_chain.coords[:]		
+		else:
+			if distance_to_v == 0:
+				distance_to_w = chain.project(Point(w))
+				right_chain, remaining = cut(chain, distance_to_w)
+
+				p_l = remaining.coords[:]
+				p_r = right_chain.coords[:]	
+			else:
+				cut_v_1, cut_v_2 = cut(chain, distance_to_v)
+
+				distance_to_w = cut_v_2.project(Point(w))
+				right_chain, remaining = cut(cut_v_2, distance_to_w)
+
+				p_l = cut_v_1.coords[:]+remaining.coords[:-1]
+				p_r = right_chain.coords[:]
+
+	else:
+		if round(distance_to_v, 4) >= round(chain.length, 4):
+	#		print("Special case")
 			distance_to_w = chain.project(Point(w))
 			right_chain, remaining = cut(chain, distance_to_w)
 
 			p_l = remaining.coords[:]
-			p_r = right_chain.coords[:]	
+			p_r = right_chain.coords[:]			
 		else:
-			cut_v_1, cut_v_2 = cut(chain, distance_to_v)
+			if distance_to_w == 0:
+				distance_to_v = chain.project(Point(v))
+				right_chain, remaining = cut(chain, distance_to_v)
 
-			distance_to_w = cut_v_2.project(Point(w))
-			right_chain, remaining = cut(cut_v_2, distance_to_w)
+				p_l = remaining.coords[:]
+				p_r = right_chain.coords[:]		
+			else:
+	#			print "here"
+				print chain
+				cut_v_1, cut_v_2 = cut(chain, distance_to_w)
+				print("Cut1: %s"%cut_v_1)
+				print("Cut2: %s"%cut_v_2)
 
-			p_l = cut_v_1.coords[:]+remaining.coords[:-1]
-			p_r = right_chain.coords[:]
 
-	else:
-		if distance_to_w == 0:
-			distance_to_v = chain.project(Point(v))
-			right_chain, remaining = cut(chain, distance_to_v)
+				distance_to_v = cut_v_2.project(Point(v))
+	#			print("Dist: %2f. Length: %2f"%(distance_to_v, cut_v_2.length) )
+				right_chain, remaining = cut(cut_v_2, distance_to_v)
+	#			print remaining.coords[:]
+				p_l = cut_v_1.coords[:]+remaining.coords[:-1]
+				p_r = right_chain.coords[:]
+	#			p_l = right_chain.coords[:] 
+	#			p_r = remaining.coords[:]+cut_v_1.coords[:]
+	#			print p_l, p_r
 
-			p_l = remaining.coords[:]
-			p_r = right_chain.coords[:]		
-		else:
-#			print "here"
-			cut_v_1, cut_v_2 = cut(chain, distance_to_w)
-			#print("Cut1: %s"%cut_v_1)
-#			print("Cut2: %s"%cut_v_2)
-
-			distance_to_v = cut_v_2.project(Point(v))
-#			print("Dist: %2f. Length: %2f"%(distance_to_v, cut_v_2.length) )
-			right_chain, remaining = cut(cut_v_2, distance_to_v)
-#			print remaining.coords[:]
-			p_l = cut_v_1.coords[:]+remaining.coords[:-1]
-			p_r = right_chain.coords[:]
-#			p_l = right_chain.coords[:] 
-#			p_r = remaining.coords[:]+cut_v_1.coords[:]
-#			print p_l, p_r
-	#print p_r
 	return p_l, p_r
 
 def cut(line, distance):
@@ -415,16 +440,23 @@ def cut(line, distance):
 	"""
 	# Cuts a line in two at a distance from its starting point
 	if distance <= 0.0 or distance >= line.length:
-		return [LineString(line)]
+		print("ERROR: CUT BEYONG LENGTH")
+		print line
+		print(distance)
+		return [LineString(line), []]
 	coords = list(line.coords)
 	for i, p in enumerate(coords):
+		print i,p
 		pd = line.project(Point(p))
+		print pd
 		if pd == distance:
 			return [
 				LineString(coords[:i+1]),
 				LineString(coords[i:])]
 		if pd > distance:
+			print("This case")
 			cp = line.interpolate(distance)
+			print("cp: %s"%(cp,))
 			return [
 				LineString(coords[:i] + [(cp.x, cp.y)]),
 				LineString([(cp.x, cp.y)] + coords[i:])]

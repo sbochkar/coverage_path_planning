@@ -10,7 +10,7 @@ def combine_chains(P, theta):
 	This is to allow decomposing cuts. The combination cuts are oriented at theta.
 	"""
 
-	active_verts = []
+	modified_edges = []
 
 	P = rotation.rotate_polygon(P, -theta)
 	minx, miny, maxx, maxy = Polygon(*P).bounds
@@ -112,10 +112,10 @@ def combine_chains(P, theta):
 		else:
 			chains[cut_parameters[1]] = final_chain
 
-		active_verts.append(v)
+		modified_edges.append(rotation.rotate_points([v[1], cut_parameters[0]], theta))
 		#print("Active verts: %s"%active_verts)
 		#print("Final chain: %s"%final_chain)
-	return rotation.rotate_polygon([chains[len(chains)-1],[]], theta), active_verts
+	return rotation.rotate_polygon([chains[len(chains)-1],[]], theta), modified_edges
 
 
 def get_points_from_intersection(intersection):
