@@ -17,14 +17,14 @@ def get_adjacency_as_matrix(P_set):
 			p1_ext = p1[0]; p2_ext = p2[0]
 			n1 = len(p1_ext); n2 = len(p2_ext)
 
-			print("p1: %s"%(p1,))
+			#print("p1: %s"%(p1,))
 			# Test every pair of edges from both polygons to see equality
 			for i in range(n1):
 				edge1 = [p1_ext[i]]+[p1_ext[(i+1)%n1]]
 				for j in range(n2):
 					edge2 = [p2_ext[j]]+[p2_ext[(j+1)%n2]]
 
-					print("Edge1: %s Edge2: %s"%(edge1, edge2))
+					#print("Edge1: %s Edge2: %s"%(edge1, edge2))
 					has_overlap, coords = edges.check_for_overlap(edge1, edge2)
 					if has_overlap:
 						adj_matrix[p1_idx][p2_idx] = coords

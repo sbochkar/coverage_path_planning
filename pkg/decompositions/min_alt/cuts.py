@@ -16,13 +16,13 @@ def find_optimal_cut(P, v):
 	Find optimal cut
 	"""
 
-
+	print("Second call#######################")
 	pois = []
 
 	min_altitude, theta = alt.get_min_altitude(P)
 
 	s = find_cut_space(P, v)
-	#print("Cut space: %s"%(s,))
+#	print("Cut space: %s"%(s,))
 	min_altitude_idx = None
 
 	for si in s:
@@ -51,6 +51,7 @@ def find_optimal_cut(P, v):
 		for dir1 in dirs_left:
 			for dir2 in dirs_right:
 				tp = find_best_transition_point(si, v[1], dir1, dir2)
+				#print tp
 				pois.append((tp, dir1, dir2))
 
 	#print("R: %s Points of interest: %s"%(v[1], pois,))
@@ -60,13 +61,17 @@ def find_optimal_cut(P, v):
 		a_l = alt.get_altitude([p_l, []], case[1])
 		a_r = alt.get_altitude([p_r, []], case[2])
 
+		from math import degrees
+		#print("Cut from: %s to %s"%(v[1], case[0]))
+		#print("Alt_l: %2f at %2f, Alt_r: %2f at %2f"%(a_l, degrees(case[1]), a_r, degrees(case[2])))
+
 		if round(a_l+a_r, 5) <= round(min_altitude, 5):
 			min_altitude = a_l+a_r
 			min_altitude_idx = case
 		
 
 	#print min_altitude, min_altitude_idx[0], degrees(min_altitude_idx[1]), degrees(min_altitude_idx[2])
-	print min_altitude_idx
+	#print min_altitude_idx
 	return min_altitude_idx
 
 
@@ -81,7 +86,19 @@ def find_cut_space(P, v):
 	c_of_b = Polygon(c_of_b)
 
 	P = Polygon(*P)
-	print P
+
+	# Debug visualization
+	# Plot the polygon itself
+#	import pylab as p
+#	x, y = P.exterior.xy
+#	p.plot(x, y)
+#	x, y = c_of_b.exterior.xy
+#	p.plot(x, y)
+#	p.show()
+
+
+
+	#print P
 	#print c_of_b
 	intersection = c_of_b.intersection(P)
 #	print("Intersection: %s"%intersection)
@@ -95,22 +112,24 @@ def find_cut_space(P, v):
 	for hole in intersection.interiors:
 		vis_holes.append(hole.coords[:])
 	P_vis.append(vis_holes)
+
 	point_x, point_y = visib_polyg.compute(v, P_vis)
+#	point_x, point_y = visib_polyg.compute(v, [P.exterior.coords[:],[]])
 	visible_polygon = Polygon(zip(point_x, point_y))
 	#print("Visible polygon: %s"%(visible_polygon,))
 
 
 	# Debug visualization
 	# Plot the polygon itself
-	import pylab as p
-	x, y = P.exterior.xy
-	p.plot(x, y)
-	x, y = c_of_b.exterior.xy
-	p.plot(x, y)
-	p.plot(point_x, point_y)
-	p.show()
-	x, y = intersection.exterior.xy
-	p.plot(x, y)
+#	import pylab as p
+#	x, y = P.exterior.xy
+#	p.plot(x, y)
+#	x, y = c_of_b.exterior.xy
+#	p.plot(x, y)
+#	x, y = intersection.exterior.xy
+#	p.plot(x, y)
+#	p.plot(point_x, point_y)
+#	p.show()
 
 
 	# At this point, we have visibility polygon.
@@ -285,23 +304,33 @@ def find_transition_point(s_orig, theta, cut_origin):
 	s = rotation.rotate_points(s_orig, -theta)
 	cut_origin = rotation.rotate_points([cut_origin], -theta)[0]
 
-	y_s_min_idx, y_s_min = min(enumerate(s), key=lambda x: x[1])
-	y_s_max_idx, y_s_max = max(enumerate(s), key=lambda x: x[1])
+	y_s_min_idx, y_s_min = min(enumerate(s), key=lambda x: x[1][1])
+	y_s_max_idx, y_s_max = max(enumerate(s), key=lambda x: x[1][1])
 
-	x_s_min_idx, x_s_min = min(enumerate(s), key=lambda x: x[0])
-	x_s_max_idx, x_s_max = max(enumerate(s), key=lambda x: x[0])
+	x_s_min_idx, x_s_min = min(enumerate(s), key=lambda x: x[1][0])
+	x_s_max_idx, x_s_max = max(enumerate(s), key=lambda x: x[1][0])
 
+#	print("Max_y: %s"%(y_s_max,))
+#	print("Min_y: %s"%(y_s_min,))
 	# Check the easy cases first
-	if y_s_min[1] >= cut_origin[1]:
-		return s_orig[y_s_min_idx]
-	elif y_s_max[1] <= cut_origin[1]:
-		return s_orig[y_s_max_idx]
+	if x_s_min[0] >= cut_origin[0]:
+		return s_orig[x_s_min_idx]
+	elif x_s_max[0] <= cut_origin[0]:
+		return s_orig[x_s_max_idx]
+#	if y_s_min[1] >= cut_origin[1]:
+#		return s_orig[y_s_min_idx]
+#	elif y_s_max[1] <= cut_origin[1]:
+#		return s_orig[y_s_max_idx]
 	else:
 		# Find the intersection which corresponds to transition point
-		hyperplane = LineString([(x_s_min[0], cut_origin[1]), (cut_origin[0], cut_origin[1])])
+		hyperplane = LineString([(cut_origin[0], y_s_max[1]+1), (cut_origin[0], y_s_min[1]-1)])
+		#hyperplane = LineString([(x_s_min[0], cut_origin[1]), (cut_origin[0], cut_origin[1])])
 		cut_segment = LineString(s)
 		transition_point = cut_segment.intersection(hyperplane)
 
+#		print("Hyperplane: %s"%(hyperplane,))
+#		print("Segment: %s"%(s,))
+#		print("transition pt: %s"%(transition_point,))
 		if not transition_point:
 			print "Not suppose to happen"
 		return rotation.rotate_points([transition_point.coords[0]], theta)[0]
@@ -329,13 +358,18 @@ def find_best_transition_point(s, cut_origin, dir_l, dir_r):
 	"""
 
 
+	from math import degrees
+#	print("Cut edge: %s"%(s,))
+#	print("Origin:%s"%(cut_origin,))
+#	print("dir_l:%2f"%(degrees(dir_l)))
+#	print("dir_r:%2f"%(degrees(dir_r)))
 	t_l = find_transition_point(s, dir_l, cut_origin)
 	t_r = find_transition_point(s, dir_r, cut_origin)
-
+#	print("Tran_l: %s"%(t_l,))
+#	print("Tran_r: %s"%(t_r,))
 	x_s, y_s = s[0]
 
 	x_t_l, y_t_l = t_l
-
 	x_t_r, y_t_r = t_r
 
 	dt_l = (x_t_l-x_s)**2+(y_t_l-y_s)**2
@@ -352,6 +386,7 @@ def find_best_transition_point(s, cut_origin, dir_l, dir_r):
 		s_r = rotation.rotate_points(s,-dir_r)
 		ds_r = abs(s_r[1][0]-s_r[0][0])
 
+#		print("Ds_l: %2f, Ds_r: %2f"%(ds_l, ds_r))
 		if ds_l > ds_r:
 			return t_l
 		else:
@@ -363,16 +398,16 @@ def perform_cut(P, e):
 	Split up P into two polygons by cutting along e
 	"""
 
-	print("Cut edge: %s"%(e,))
+	#print("Cut edge: %s"%(e,))
 	v = e[0]
 	w = e[1]
 	chain = LineString(P[0]+[P[0][0]])
-	print("Chain to be cut: %s"%(chain,))
-	print("Chain length: %7f"%chain.length)
+	#print("Chain to be cut: %s"%(chain,))
+	#print("Chain length: %7f"%chain.length)
 
 	distance_to_v = chain.project(Point(v))
 	distance_to_w = chain.project(Point(w))
-	print("D_to_w: %7f, D_to_v: %2f"%(distance_to_w, distance_to_v))
+	#print("D_to_w: %7f, D_to_v: %2f"%(distance_to_w, distance_to_v))
 
 	if distance_to_w > distance_to_v:
 		if round(distance_to_w, 4) >= round(chain.length, 4):
@@ -415,10 +450,10 @@ def perform_cut(P, e):
 				p_r = right_chain.coords[:]		
 			else:
 	#			print "here"
-				print chain
+				#print chain
 				cut_v_1, cut_v_2 = cut(chain, distance_to_w)
-				print("Cut1: %s"%cut_v_1)
-				print("Cut2: %s"%cut_v_2)
+				#print("Cut1: %s"%cut_v_1)
+				#print("Cut2: %s"%cut_v_2)
 
 
 				distance_to_v = cut_v_2.project(Point(v))
@@ -433,6 +468,7 @@ def perform_cut(P, e):
 
 	return p_l, p_r
 
+
 def cut(line, distance):
 	"""
 	Splicing a line
@@ -444,19 +480,25 @@ def cut(line, distance):
 		print line
 		print(distance)
 		return [LineString(line), []]
+
 	coords = list(line.coords)
-	for i, p in enumerate(coords):
-		print i,p
-		pd = line.project(Point(p))
-		print pd
+	#print("Coords: %s"%(coords,))
+	pd = 0
+	#for i, p in enumerate(coords):
+	for i in range(len(coords)):
+		if i > 0:
+			pd = LineString(coords[:i+1]).length
+		#print i,coords[:i+1]
+		#pd = line.project(Point(p))
+		#print pd
 		if pd == distance:
 			return [
 				LineString(coords[:i+1]),
 				LineString(coords[i:])]
 		if pd > distance:
-			print("This case")
+			#print("This case")
 			cp = line.interpolate(distance)
-			print("cp: %s"%(cp,))
+			#print("cp: %s"%(cp,))
 			return [
 				LineString(coords[:i] + [(cp.x, cp.y)]),
 				LineString([(cp.x, cp.y)] + coords[i:])]
@@ -465,6 +507,13 @@ def cut(line, distance):
 			return [
 				LineString(coords[:i] + [(cp.x, cp.y)]),
 				LineString([(cp.x, cp.y)] + coords[i:])]
+
+
+def iterative_project(line, distance):
+	"""
+	To account for self crossing edges
+	"""
+
 
 
 if __name__ == '__main__':

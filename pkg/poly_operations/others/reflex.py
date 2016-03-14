@@ -27,7 +27,6 @@ def find_reflex_vertices(P):
 		dy_2 = float(p_2[1][1])-float(p_1[1][1])
 		if dx_1*dy_2-dy_1*dx_2 < 0.0:
 			R.append(p_1)
-
 	return R
 
 
