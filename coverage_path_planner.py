@@ -29,7 +29,7 @@ class Robot:
 		self.dynamics = dynamics
 
 
-GLKH_LOCATION = "/home/stan/misc/GLKH-1.0/"
+GLKH_LOCATION = "/home/sbochkar/misc/GLKH-1.0/"
 
 
 def coverage_path_planner(map_num, robot, method):
@@ -188,4 +188,4 @@ def coverage_path_planner(map_num, robot, method):
 if __name__ == "__main__":
 
 	robot = Robot(0.2, "dubins")
-	coverage_path_planner(1, robot, 1)
+	coverage_path_planner(8, robot, 2)

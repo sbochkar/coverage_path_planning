@@ -38,7 +38,7 @@ def compute_costs(P, mapping, radius):
 			if has_collision(P, [(x0, y0), (x1, y1)]):
 				length = 9999999
 			else:
-				length = dubins.path_length(q0, q1, r)
+				length = 100*dubins.path_length(q0, q1, r)
 
 			cost[i][j] = length
 
