@@ -9,7 +9,7 @@ def combine_chains(P, theta):
 	Combine the simple chains to form one non simple chain.
 	This is to allow decomposing cuts. The combination cuts are oriented at theta.
 	"""
-
+	theta = 0
 	modified_edges = []
 
 	P = rotation.rotate_polygon(P, -theta)
@@ -100,6 +100,10 @@ def combine_chains(P, theta):
 			#print cut(dest_chain, distance_to_w)
 
 		#if LinearRing(dest_chain).is_ccw:
+		#print("Orig chain1: %s"%(orig_chain_1,))
+		#print("Orig chain2: %s"%(orig_chain_2,))
+		#print("Dest chain1: %s"%(dest_chain_1,))
+		#print("Dest chain2: %s"%(dest_chain_2,))
 		final_chain = orig_chain_1+dest_chain_2+dest_chain_1+orig_chain_2
 #		final_chain = dest_chain_1[:]+\
 #						orig_chain_2[:-1]+\
@@ -146,16 +150,29 @@ def cut(line, distance):
 	"""
 	# Cuts a line in two at a distance from its starting point
 	if distance <= 0.0 or distance >= line.length:
-		return [LineString(line)]
+		print("ERROR: CUT BEYONG LENGTH")
+		print line
+		print(distance)
+		return [LineString(line), []]
+
 	coords = list(line.coords)
-	for i, p in enumerate(coords):
-		pd = line.project(Point(p))
+	#print("Coords: %s"%(coords,))
+	pd = 0
+	#for i, p in enumerate(coords):
+	for i in range(len(coords)):
+		if i > 0:
+			pd = LineString(coords[:i+1]).length
+		#print i,coords[:i+1]
+		#pd = line.project(Point(p))
+		#print pd
 		if pd == distance:
 			return [
 				LineString(coords[:i+1]),
 				LineString(coords[i:])]
 		if pd > distance:
+			#print("This case")
 			cp = line.interpolate(distance)
+			#print("cp: %s"%(cp,))
 			return [
 				LineString(coords[:i] + [(cp.x, cp.y)]),
 				LineString([(cp.x, cp.y)] + coords[i:])]
@@ -164,6 +181,34 @@ def cut(line, distance):
 			return [
 				LineString(coords[:i] + [(cp.x, cp.y)]),
 				LineString([(cp.x, cp.y)] + coords[i:])]
+
+
+
+#def cut(line, distance):
+#	"""
+#	Splicing a line
+#	Credits go to author of the shapely manual
+#	"""
+#	# Cuts a line in two at a distance from its starting point
+#	if distance <= 0.0 or distance >= line.length:
+#		return [LineString(line)]
+#	coords = list(line.coords)
+#	for i, p in enumerate(coords):
+#		pd = line.project(Point(p))
+#		if pd == distance:
+#			return [
+#				LineString(coords[:i+1]),
+#				LineString(coords[i:])]
+#		if pd > distance:
+#			cp = line.interpolate(distance)
+#			return [
+#				LineString(coords[:i] + [(cp.x, cp.y)]),
+#				LineString([(cp.x, cp.y)] + coords[i:])]
+#		if i == len(coords)-1:
+#			cp = line.interpolate(distance)
+#			return [
+#				LineString(coords[:i] + [(cp.x, cp.y)]),
+#				LineString([(cp.x, cp.y)] + coords[i:])]
 
 
 

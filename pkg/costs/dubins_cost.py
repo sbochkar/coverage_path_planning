@@ -1,7 +1,11 @@
 import dubins
+from shapely.geometry import LineString
+from shapely.geometry import Polygon
+from shapely.geometry import LinearRing
 
 
-def compute_costs(mapping, radius):
+
+def compute_costs(P, mapping, radius):
 	"""
 	Compute dubins costs between path segments which could be either
 	a line or a point.
@@ -23,7 +27,15 @@ def compute_costs(mapping, radius):
 
 			q0 = mapping[i][0].get_exit_info(mapping[i][1])
 			q1 = mapping[j][0].get_entrance_info(mapping[j][1])
-			length = dubins.path_length(q0, q1, r)
+
+			# Check for collisions
+			x0 = q0[0]; y0 = q0[1]
+			x1 = q1[0]; y1 = q1[1]
+
+			if has_collision(P, [(x0, y0), (x1, y1)]):
+				length = 9999999
+			else:
+				length = dubins.path_length(q0, q1, r)
 
 			cost[i][j] = length
 
@@ -49,7 +61,18 @@ def compute_costs(mapping, radius):
 	return cost, cluster_list
 
 
+def has_collision(P, edge):
 
+	exterior = LinearRing(P[0])
+	holes = P[1]
+	segment = LineString(edge)
+
+	if exterior.intersects(segment): return True
+
+	for hole in holes:
+		interior = LinearRing(hole)
+		if interior.intersects(segment): return True
+	return False
 
 if __name__ == '__main__':
 	if __package__ is None:

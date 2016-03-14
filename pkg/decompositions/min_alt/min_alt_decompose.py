@@ -20,7 +20,7 @@ def decompose(P):
 
 	#D = recursive_cuts(P_fused)
 	recursive_cuts(P_fused)
-	print("List of polygons after recursion: %s"%(list_of_polygons,))
+	#print("List of polygons after recursion: %s"%(list_of_polygons,))
 
 	# Need a smarter way of doing this
 	#if len(D) == 2:

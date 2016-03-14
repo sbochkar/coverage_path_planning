@@ -60,12 +60,12 @@ def populate_with_lines(P, width, theta):
 
 	# Parallel offset the boundaries of ext and holes
 	lr_ext = LinearRing(P[0])
-	offset_ext = lr_ext.parallel_offset(width, side='left', join_style=1)
+	offset_ext = lr_ext.parallel_offset(width/2, side='left', join_style=1)
 
 	lr_new_holes = []
 	for hole in P[1]:
 		lr_hole = LinearRing(hole)
-		offset_hole = lr_hole.parallel_offset(width, side='left', join_style=1)
+		offset_hole = lr_hole.parallel_offset(width/2, side='left', join_style=1)
 		lr_new_holes.append(offset_hole)
 
 	if offset_ext.is_empty:
@@ -85,13 +85,21 @@ def populate_with_lines(P, width, theta):
 	# Start generating lines from left to right equidistance from each other
 	segments = []
 	cur_x = minx
+	finishing_touches = False
 
-	while cur_x <= maxx:
+	while (cur_x <= maxx) or (finishing_touches):
 
-		test_line = LineString([(cur_x, miny), (cur_x, maxy)])
+		if finishing_touches:
+			cur_x = maxx-0.001
+
+		# Crudely deal with the very first line
+		if cur_x == minx:
+			test_line = LineString([(cur_x+0.001, miny), (cur_x+0.001, maxy)])
+		else:
+			test_line = LineString([(cur_x, miny), (cur_x, maxy)])
+
 
 		intersection = shrunk_polygon.intersection(test_line)
-
 		# Handle each type of intersection separatly
 		if intersection.geom_type == "Point":
 			new_coord = rotation.rotate_points(intersection.coords[:], theta)
@@ -118,6 +126,15 @@ def populate_with_lines(P, width, theta):
 						segments.append(classes.LineSegment(new_coords))
 
 		cur_x += width
+
+		if (cur_x > maxx) and (cur_x <= maxx+width/2):
+			finishing_touches = True
+		else:
+			finishing_touches = False
+
+
+	# Process the last segment
+
 
 	return segments
 
