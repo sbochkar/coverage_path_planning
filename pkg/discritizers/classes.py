@@ -39,6 +39,11 @@ class LineSegment:
 
 		return (self.coords[(dir_num+1)%2][0], self.coords[(dir_num+1)%2][1], self.dirs[dir_num])
 
+	def get_length(self):
+		x0, y0 = self.coords[0]
+		x1, y1 = self.coords[1]
+
+		return sqrt((x1-x0)**2 + (y1-y0)**2)
 
 class PointSegment:
 	def __init__(self, coord):
@@ -52,3 +57,5 @@ class PointSegment:
 	def get_entrance_info(self, dir_num):
 		return (self.coord[0], self.coord[1], self.dirs[dir_num])
 
+	def get_length(self):
+		return 0.0

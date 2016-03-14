@@ -28,10 +28,10 @@ def plot_polygon_outline(ax, polygon):
 	P = Polygon(*polygon)
 	min_x, min_y, max_x, max_y = P.bounds
 
-	patch = PolygonPatch(P, facecolor="#6699cc", edgecolor="#6699cc", alpha=0.5, zorder=2)
+	patch = PolygonPatch(P, facecolor="#6699cc", edgecolor="#6699cc", alpha=0.5, zorder=1)
 	ax.add_patch(patch)
-	ax.set_xlim([min_x,max_x])
-	ax.set_ylim([min_y,max_y])
+	ax.set_xlim([min_x-0.5,max_x+0.5])
+	ax.set_ylim([min_y-0.5,max_y+0.5])
 
 
 def plot_decomposition(ax, decomposition, shared_edges):
@@ -76,7 +76,7 @@ def plot_samples(ax, segments):
 	for segment in segments:
 		if isinstance(segment, classes.PointSegment):
 			x, y = segment.coord
-			ax.plot(x, y, color='orange', alpha=0.9, linewidth=3, zorder=3)	
+			ax.scatter(x, y, color='orange', alpha=0.9, linewidth=3, zorder=3)	
 		elif isinstance(segment, classes.LineSegment):
 			x, y = zip(*segment.coords)
 			ax.plot(x, y, color='orange', alpha=0.9, linewidth=3, zorder=3)	
