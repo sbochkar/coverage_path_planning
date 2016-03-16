@@ -1,6 +1,57 @@
 import operator
 
 
+def build_set_shared_edges(v, adj):
+
+	shared_edges = []
+	for i in range(len(adj)):
+		for j in range(i, len(adj)):
+
+			if not adj[i][j] is None:
+
+				if v in adj[i][j]:
+					shared_edges.append((i, j, adj[i][j]))
+
+	return shared_edges
+
+
+def combine_polygons_from_decomposition(shared_edges, decomposition, adj):
+
+	while shared_edges:
+
+		p1_id, p2_id, test_edge = shared_edges.pop()
+
+		# Get the exterior of the polygon since this is what will be combined
+		P1 = decomposition[p1_id][0]
+		P2 = decomposition[p2_id][0]
+
+		print P1, P2
+		print operations.combine_two_adjacent_polys(P1, P2, test_edge)
+
+
+def reoptimize(P, decomposition, adj):
+	"""
+	"""
+
+	# Build a set of reflex verticies
+	R = reflex.find_reflex_vertices(P)
+
+	while R:
+		# Pick one reflex vertex from R
+		v = R.pop()
+
+		# Build a set of all shared edges in the decomposition which shared v
+		shared_edges = build_set_shared_edges(v[1], adj)
+
+		if not shared_edges: continue # TODO: ATTEMPT TO DO OPTIMIZING CUT
+
+		combine_polygons_from_decomposition(shared_edges, decomposition, adj)
+		# Combine all polygons in shared_edges to form one polygon
+
+
+
+
+
 def decompose(P):
 	"""
 	Min altitude decomposition.
@@ -17,7 +68,6 @@ def decompose(P):
 	#print("Min Alt: %2f, Theta: %2f"%(min_alt, 180*theta/3.14))
 	P_fused, modified_edges = chain_combination.combine_chains(P, theta)
 
-
 	#D = recursive_cuts(P_fused)
 	recursive_cuts(P_fused)
 	#print("List of polygons after recursion: %s"%(list_of_polygons,))
@@ -30,79 +80,6 @@ def decompose(P):
 
 	return list_of_polygons
 
-#	D = [P_fused]
-#	print("Modified edges: %s"%(modified_edges,))
-
-#	R = reflex.find_reflex_vertices(P_fused)
-#	print("Reflex set: %s"%(R,))
-#
-#	# Createa a dict associating reflex vertices with polygons
-#	ref_dict = {}
-#	for vert in R:
-#		ref_dict[vert] = 0
-		
-	# For bring up testing, make just one cut
-	# Since D is one chain, we can just pass D. However for later passes, need to find a polygon in D before passing to this function
-
-#	while ref_dict:
-#		v, p_id = ref_dict.popitem()
-#		#print("Poped vert: %s, id:%d"%(v, p_id))
-#
-#		cut = cuts.find_optimal_cut(D[p_id], v)
-#		#print("Ref: %s"%(v[1],))
-#		#print("Cut: %s"%(cut,))
-#
-#		if cut and cut is not None: # Not empty
-#			p_l, p_r = cuts.perform_cut(D[p_id], [v[1], cut[0]])
-#
-#			# Uodate the dictionary accordingly
-#			R_l = reflex.find_reflex_vertices([p_l, []])
-#			for vertex in R_l:
-#				ref_dict[vertex] = p_id
-#
-#			R_r = reflex.find_reflex_vertices([p_r, []])
-#			p_id_max = max(ref_dict.values())
-#			for vertex in R_r:
-#				ref_dict[vertex] = p_id_max+1
-#
-#			#print("Left poly: %s"%(p_l,))
-#			#print("Right poly: %s"%(p_r,))
-#			D.pop(p_id)
-#			D.insert(p_id, [p_l, []])
-#			D.append([p_r, []])
-#
-#	#print D
-#	return D
-#	print("Active verts: %s"%(active_verts,))
-#	cut = alt.find_optimal_cut(poly, v)
-
-#	D = [[D, []]]
-#	while R:
-#		v = R.pop()
-#		for poly in D:
-#			if v in poly[0]:
-#				break
-#
-#		R_temp = alt.find_reflex_vertices(poly)
-#		if v not in R_temp:
-#			continue
-#
-#		#print poly
-#		#print v
-#		cut = alt.find_optimal_cut(poly, v)
-#		#print cut
-#		# If best cut did not improve
-#		if cut is None:
-#			continue
-#		#print poly, v, cut[0]
-#		p_l, p_r = alt.perform_cut(poly,[v,cut[0]])
-#		#print "New polygons"
-#		#print p_l, p_r
-#		D.remove(poly)
-#		D.append([p_l, []])
-#		D.append([p_r, []])
-#		#print D
-#		#print "Finished loop"
 
 list_of_polygons = []
 def recursive_cuts(P):
@@ -140,3 +117,4 @@ else:
 	from ...decompositions.min_alt import cuts
 	from ...poly_operations.others import chain_combination
 	from ...poly_operations.others import reflex
+	from ...poly_operations.others import operations

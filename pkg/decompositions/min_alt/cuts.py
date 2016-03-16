@@ -6,17 +6,24 @@ from shapely.geometry import LineString
 import cone_of_bisection
 import visib_polyg
 
+from math import sqrt
+
 
 LINE_LENGTH_THRESHOLD = 0.002
 BUFFER_RADIUS = 0.001
 
+# Chech if three points are collinear
+def collinear(p1, p2, p3):
+	return abs((p1[1]-p2[1])*(p1[0]-p3[0])-(p1[1]-p3[1])*(p1[0]-p2[0])) <= 1e-9
+
+def euc_distance(p1, p2):
+	return sqrt((p2[1]-p1[1])**2+(p2[0]-p1[0])**2)
 
 def find_optimal_cut(P, v):
 	"""
 	Find optimal cut
 	"""
 
-	print("Second call#######################")
 	pois = []
 
 	min_altitude, theta = alt.get_min_altitude(P)
@@ -25,7 +32,19 @@ def find_optimal_cut(P, v):
 #	print("Cut space: %s"%(s,))
 	min_altitude_idx = None
 
-	for si in s:
+	# First, find edges on cut space that are collinear with reflex vertex
+	collinear_dict = {}
+	for i in range(1,len(s)):
+		if collinear(v[1], s[i-1], s[i]):
+			if euc_distance(v[1], s[i-1]) < euc_distance(v[1], s[i]):
+				collinear_dict[s[i]] = s[i-1]
+			else:
+				collinear_dict[s[i-1]] = s[i]
+
+	for i in range(1, len(s)):
+		si = [s[i-1], s[i]]
+
+	#for si in s:
 		# Process each edge si, have to be cw
 		lr_si = LinearRing([v[1]]+si)
 		if lr_si.is_ccw:
@@ -33,6 +52,7 @@ def find_optimal_cut(P, v):
 			#print lr_si.is_ccw
 			si = [si[1]]+[si[0]]
 			#print si
+
 
 		cut_point = si[0]
 		#print P, v, cut_point
@@ -52,7 +72,12 @@ def find_optimal_cut(P, v):
 			for dir2 in dirs_right:
 				tp = find_best_transition_point(si, v[1], dir1, dir2)
 				#print tp
-				pois.append((tp, dir1, dir2))
+				# Here check if tp is collinear with v
+				# If so and invisible, replace with visible collinear point
+				if tp in collinear_dict.keys():
+					pois.append((collinear_dict[tp], dir1, dir2))
+				else:
+					pois.append((tp, dir1, dir2))
 
 	#print("R: %s Points of interest: %s"%(v[1], pois,))
 	# Evaluate all transition points
@@ -81,7 +106,7 @@ def find_cut_space(P, v):
 	"""
 
 
-
+	print v
 	c_of_b = cone_of_bisection.compute(P, v)
 	c_of_b = Polygon(c_of_b)
 
@@ -97,7 +122,7 @@ def find_cut_space(P, v):
 #	p.show()
 
 
-
+	print P.is_valid
 	#print P
 	#print c_of_b
 	intersection = c_of_b.intersection(P)
@@ -124,10 +149,10 @@ def find_cut_space(P, v):
 #	import pylab as p
 #	x, y = P.exterior.xy
 #	p.plot(x, y)
-#	x, y = c_of_b.exterior.xy
-#	p.plot(x, y)
-#	x, y = intersection.exterior.xy
-#	p.plot(x, y)
+	#x, y = c_of_b.exterior.xy
+	#p.plot(x, y)
+	#x, y = intersection.exterior.xy
+	#p.plot(x, y)
 #	p.plot(point_x, point_y)
 #	p.show()
 
@@ -150,7 +175,7 @@ def find_cut_space(P, v):
 
 	#common_items = ext_ls.intersection(visible_polygon_ls)
 	common_items = ext_ls.intersection(visible_polygon_ls_buffer) # Buffer gives better results
-	#print("Intersection: %s"%common_items)
+
 	# Filter out very small segments
 	# Add environment first
 	if common_items.geom_type == "MultiLineString":
@@ -163,7 +188,6 @@ def find_cut_space(P, v):
 
 				if edge_ls.length > LINE_LENGTH_THRESHOLD:
 					cut_space.append(edge)
-
 	elif common_items.geom_type == "LineString":
 		# Examine each edge of the linestring
 		line = common_items.coords[:]
@@ -242,18 +266,31 @@ def find_cut_space(P, v):
 								cut_space.append(edge)
 
 
+	# Process the cut space to be coordinate wise, cw
+	cut_space_chain = []
+	cut_space_chain.append(cut_space[0][0])
+	for line in cut_space:
+		cut_space_chain.append(line[1])
+
+	if LinearRing(cut_space_chain+[v[1]]).is_ccw:
+		cut_space_ring = cut_space_chain[::-1]
+	else:
+		cut_space_ring = cut_space_chain[:]
+
+	print cut_space_ring
 	# PLOTTING
-#	import pylab as p
-#	# Plot the polygon itself
-#	x, y = P.exterior.xy
-#	p.plot(x, y)
-#	# plot the intersection of the cone with the polygon
-#	intersection_x, intersection_y = intersection.exterior.xy
-#	p.plot(intersection_x, intersection_y)
-#	p.show()
+	import pylab as p
+	# Plot the polygon itself
+	x, y = P.exterior.xy
+	p.plot(x, y)
+	# plot the intersection of the cone with the polygon
+	intersection_x, intersection_y = intersection.exterior.xy
+	p.plot(intersection_x, intersection_y)
+	p.show()
 
 	#print cut_space
-	return cut_space
+	return cut_space_ring
+	#return cut_space
 
 
 def get_closest_intersecting_polygon(intersection, v):

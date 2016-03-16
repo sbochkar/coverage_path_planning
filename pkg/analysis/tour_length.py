@@ -14,7 +14,7 @@ def length(tour, segments, cost_matrix):
 		o_node = tour[i]
 		i_node = tour[i+1]
 
-		tour_length += cost_matrix[o_node][i_node]
+		tour_length += cost_matrix[o_node][i_node]/100
 
-	tour_length += cost_matrix[tour[-1]][tour[0]]
+	tour_length += cost_matrix[tour[-1]][tour[0]]/100
 	return tour_length

@@ -188,4 +188,4 @@ def coverage_path_planner(map_num, robot, method):
 if __name__ == "__main__":
 
 	robot = Robot(0.2, "dubins")
-	coverage_path_planner(8, robot, 2)
+	coverage_path_planner(10, robot, 1)

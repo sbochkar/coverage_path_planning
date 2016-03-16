@@ -1,0 +1,47 @@
+NAME : cpp_test.4735.tour
+COMMENT : Length = 4735
+COMMENT : Found by GLKH [Keld Helsgaun] Wed Mar 16 17:44:44 2016
+TYPE : TOUR
+DIMENSION : 39
+TOUR_SECTION
+1
+65
+64
+54
+62
+59
+51
+26
+27
+30
+31
+34
+35
+38
+39
+42
+43
+46
+47
+50
+56
+67
+72
+73
+78
+75
+70
+57
+24
+21
+20
+17
+16
+13
+12
+9
+8
+5
+4
+-1
+EOF
