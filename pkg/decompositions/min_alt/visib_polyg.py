@@ -28,7 +28,7 @@ def compute(v, P):
 	wall_points = []
 	for point in ext:
 		wall_points.append(vis.Point(*point))
-	print 'Walls in standard form : ',vis.Polygon(wall_points).is_in_standard_form()
+	#print 'Walls in standard form : ',vis.Polygon(wall_points).is_in_standard_form()
 
 	#for i in range(len(vis_intersection_wall_points)):
 		#print vis_intersection_wall_points[i].x(), vis_intersection_wall_points[i].y()
@@ -42,7 +42,7 @@ def compute(v, P):
 			hole_points.append(vis.Point(*point))
 
 		holes.append(hole_points)
-		print 'Hole in standard form : ',vis.Polygon(hole_points).is_in_standard_form()
+		#print 'Hole in standard form : ',vis.Polygon(hole_points).is_in_standard_form()
 
 	# Construct a convinient list
 	env = []

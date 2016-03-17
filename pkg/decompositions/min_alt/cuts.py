@@ -2,6 +2,8 @@ from shapely.geometry import Polygon
 from shapely.geometry import Point
 from shapely.geometry import LinearRing
 from shapely.geometry import LineString
+from shapely.geometry.polygon import orient
+
 
 import cone_of_bisection
 import visib_polyg
@@ -9,8 +11,8 @@ import visib_polyg
 from math import sqrt
 
 
-LINE_LENGTH_THRESHOLD = 0.002
-BUFFER_RADIUS = 0.001
+LINE_LENGTH_THRESHOLD = 0.001
+BUFFER_RADIUS = 0.0001
 
 # Chech if three points are collinear
 def collinear(p1, p2, p3):
@@ -18,6 +20,61 @@ def collinear(p1, p2, p3):
 
 def euc_distance(p1, p2):
 	return sqrt((p2[1]-p1[1])**2+(p2[0]-p1[0])**2)
+
+import itertools
+def form_collinear_dictionary(s, v):
+
+	collinear_dict = {}
+	# Check all pairs of si in s, to see if their endpoitns are collinear
+	for si in s:
+		if collinear(v[1], si[0], si[1]):
+			if euc_distance(v[1], si[0]) < euc_distance(v[1], si[1]):
+				collinear_dict[si[1]] = si[0]
+			else:
+				collinear_dict[si[0]] = si[1]
+
+	for comb in itertools.combinations(s, 2):
+		#print("Comb:%s"%(comb,))
+		si1 = comb[0];	si2 = comb[1]
+
+		# if one of the points are the same; ignore
+		pt_l1 = si1[0]; pt_l2 = si1[1]
+		pt_r1 = si2[0]; pt_r2 = si2[1]
+
+		if (pt_l1 == pt_r1) or (pt_l1 == pt_r2) or (pt_r2 == pt_l2) or (pt_r1 == pt_l2):
+			continue
+
+
+		# Case 1 to consider	
+		if collinear(v[1], pt_l1, pt_r1):
+			if euc_distance(v[1], pt_l1) < euc_distance(v[1], pt_r1):
+				collinear_dict[pt_r1] = pt_l1
+			else:
+				collinear_dict[pt_l1] = pt_r1
+
+		# Case 2 to consider	
+		if collinear(v[1], pt_l2, pt_r1):
+			if euc_distance(v[1], pt_l2) < euc_distance(v[1], pt_r1):
+				collinear_dict[pt_r1] = pt_l2
+			else:
+				collinear_dict[pt_l2] = pt_r1
+
+		# Case 3 to consider	
+		if collinear(v[1], pt_l2, pt_r2):
+			if euc_distance(v[1], pt_l2) < euc_distance(v[1], pt_r2):
+				collinear_dict[pt_r2] = pt_l2
+			else:
+				collinear_dict[pt_l2] = pt_r2
+
+		# Case 4 to consider	
+		if collinear(v[1], pt_l1, pt_r2):
+			if euc_distance(v[1], pt_l1) < euc_distance(v[1], pt_r2):
+				collinear_dict[pt_r2] = pt_l1
+			else:
+				collinear_dict[pt_l1] = pt_r2
+
+	return collinear_dict
+
 
 def find_optimal_cut(P, v):
 	"""
@@ -33,18 +90,11 @@ def find_optimal_cut(P, v):
 	min_altitude_idx = None
 
 	# First, find edges on cut space that are collinear with reflex vertex
-	collinear_dict = {}
-	for i in range(1,len(s)):
-		if collinear(v[1], s[i-1], s[i]):
-			if euc_distance(v[1], s[i-1]) < euc_distance(v[1], s[i]):
-				collinear_dict[s[i]] = s[i-1]
-			else:
-				collinear_dict[s[i-1]] = s[i]
-
-	for i in range(1, len(s)):
-		si = [s[i-1], s[i]]
-
-	#for si in s:
+	collinear_dict = form_collinear_dictionary(s, v)
+#	print collinear_dict
+#	for i in range(1, len(s)):
+#		si = [s[i-1], s[i]]
+	for si in s:
 		# Process each edge si, have to be cw
 		lr_si = LinearRing([v[1]]+si)
 		if lr_si.is_ccw:
@@ -57,7 +107,6 @@ def find_optimal_cut(P, v):
 		cut_point = si[0]
 		#print P, v, cut_point
 		p_l, p_r = perform_cut(P, [v[1], cut_point])
-		#print p_l, p_r
 
 		dirs_left = directions.get_directions_set([p_l, []])
 		dirs_right = directions.get_directions_set([p_r, []])
@@ -71,7 +120,6 @@ def find_optimal_cut(P, v):
 		for dir1 in dirs_left:
 			for dir2 in dirs_right:
 				tp = find_best_transition_point(si, v[1], dir1, dir2)
-				#print tp
 				# Here check if tp is collinear with v
 				# If so and invisible, replace with visible collinear point
 				if tp in collinear_dict.keys():
@@ -86,7 +134,7 @@ def find_optimal_cut(P, v):
 		a_l = alt.get_altitude([p_l, []], case[1])
 		a_r = alt.get_altitude([p_r, []], case[2])
 
-		from math import degrees
+		#from math import degrees
 		#print("Cut from: %s to %s"%(v[1], case[0]))
 		#print("Alt_l: %2f at %2f, Alt_r: %2f at %2f"%(a_l, degrees(case[1]), a_r, degrees(case[2])))
 
@@ -96,7 +144,8 @@ def find_optimal_cut(P, v):
 		
 
 	#print min_altitude, min_altitude_idx[0], degrees(min_altitude_idx[1]), degrees(min_altitude_idx[2])
-	#print min_altitude_idx
+#	print v[1]
+#	print min_altitude_idx
 	return min_altitude_idx
 
 
@@ -106,7 +155,7 @@ def find_cut_space(P, v):
 	"""
 
 
-	print v
+#	print v
 	c_of_b = cone_of_bisection.compute(P, v)
 	c_of_b = Polygon(c_of_b)
 
@@ -114,22 +163,22 @@ def find_cut_space(P, v):
 
 	# Debug visualization
 	# Plot the polygon itself
-#	import pylab as p
-#	x, y = P.exterior.xy
-#	p.plot(x, y)
-#	x, y = c_of_b.exterior.xy
-#	p.plot(x, y)
-#	p.show()
+	import pylab as p
+	x, y = P.exterior.xy
+	p.plot(x, y)
+	x, y = c_of_b.exterior.xy
+	p.plot(x, y)
+	p.show()
 
 
-	print P.is_valid
+#	print P.is_valid
 	#print P
 	#print c_of_b
 	intersection = c_of_b.intersection(P)
 #	print("Intersection: %s"%intersection)
 
 	intersection = get_closest_intersecting_polygon(intersection, v)
-	#print("Closest Intersection object: %s"%(intersection,))
+#	print("Closest Intersection object: %s"%(intersection,))
 
 
 	P_vis = []; vis_holes = []
@@ -141,7 +190,7 @@ def find_cut_space(P, v):
 	point_x, point_y = visib_polyg.compute(v, P_vis)
 #	point_x, point_y = visib_polyg.compute(v, [P.exterior.coords[:],[]])
 	visible_polygon = Polygon(zip(point_x, point_y))
-	#print("Visible polygon: %s"%(visible_polygon,))
+#	print("Visible polygon: %s"%(visible_polygon,))
 
 
 	# Debug visualization
@@ -175,6 +224,7 @@ def find_cut_space(P, v):
 
 	#common_items = ext_ls.intersection(visible_polygon_ls)
 	common_items = ext_ls.intersection(visible_polygon_ls_buffer) # Buffer gives better results
+#	print("Common item: %s"%(common_items,))
 
 	# Filter out very small segments
 	# Add environment first
@@ -221,7 +271,7 @@ def find_cut_space(P, v):
 						cut_space.append(edge)
 
 
-
+#	print("One iteration of cut: %s"%(cut_space,))
 	## Now start adding the hole boundaries
 	for interior in P.interiors:
 		common_items = interior.intersection(visible_polygon_ls_buffer)
@@ -266,31 +316,49 @@ def find_cut_space(P, v):
 								cut_space.append(edge)
 
 
-	# Process the cut space to be coordinate wise, cw
-	cut_space_chain = []
-	cut_space_chain.append(cut_space[0][0])
-	for line in cut_space:
-		cut_space_chain.append(line[1])
+	# cut_space could be lines our of order in no particular direciton
+	# We want the cut space to be cw oriented
 
-	if LinearRing(cut_space_chain+[v[1]]).is_ccw:
-		cut_space_ring = cut_space_chain[::-1]
-	else:
-		cut_space_ring = cut_space_chain[:]
+	# First form a list of points
+#	temp_points_list = []
+#	for line in cut_space:
+#		temp_points_list.append(line[0]); temp_points_list.append(line[1]) 
+#
+#	# Form a polygon with the exterior the points geenrated above
+#	temp_poly = Polygon(temp_points_list)
+#
+#	# Orient the polygon's exterior clockwise
+#	orient(temp_poly, sign=-1)
+#
+#	# Form the final oriented cut space chain
+#	cut_space_ring = temp_poly.exterior.coords[:-1]
 
-	print cut_space_ring
+
+#	print("Cut Space: %s:"%(cut_space,))
+#	cut_space_chain = []
+#	cut_space_chain.append(cut_space[0][0])
+#	for line in cut_space:
+#		cut_space_chain.append(line[1])
+#
+#	if LinearRing(cut_space_chain+[v[1]]).is_ccw:
+#		cut_space_ring = cut_space_chain[::-1]
+#	else:
+#		cut_space_ring = cut_space_chain[:]
+
+#	print cut_space_ring
 	# PLOTTING
-	import pylab as p
-	# Plot the polygon itself
-	x, y = P.exterior.xy
-	p.plot(x, y)
-	# plot the intersection of the cone with the polygon
-	intersection_x, intersection_y = intersection.exterior.xy
-	p.plot(intersection_x, intersection_y)
-	p.show()
+#	import pylab as p
+#	# Plot the polygon itself
+#	x, y = P.exterior.xy
+#	p.plot(x, y)
+#	# plot the intersection of the cone with the polygon
+#	intersection_x, intersection_y = intersection.exterior.xy
+#	p.plot(intersection_x, intersection_y)
+#	p.show()
 
 	#print cut_space
-	return cut_space_ring
-	#return cut_space
+#	return cut_space_ring
+	return cut_space
 
 
 def get_closest_intersecting_polygon(intersection, v):

@@ -24,9 +24,10 @@ def get_adjacency_as_matrix(P_set):
 				for j in range(n2):
 					edge2 = [p2_ext[j]]+[p2_ext[(j+1)%n2]]
 
-					#print("Edge1: %s Edge2: %s"%(edge1, edge2))
+#					print("Edge1: %s Edge2: %s"%(edge1, edge2))
 					has_overlap, coords = edges.check_for_overlap(edge1, edge2)
 					if has_overlap:
+#						print coords
 						adj_matrix[p1_idx][p2_idx] = coords
 						adj_matrix[p2_idx][p1_idx] = coords
 
