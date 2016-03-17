@@ -29,7 +29,7 @@ def check_for_overlap(edge1, edge2):
 
 	# Should always be LineString object or a point or empty
 	if isection.geom_type == "LineString":
-		if isection.length > 10*BUFFER_TOLERANCE:
+		if isection.length > 100*BUFFER_TOLERANCE:
 			coords = isection.coords[:]
 			return True, coords
 		else:

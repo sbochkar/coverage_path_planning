@@ -29,7 +29,7 @@ class Robot:
 		self.dynamics = dynamics
 
 
-GLKH_LOCATION = "/home/sbochkar/misc/GLKH-1.0/"
+GLKH_LOCATION = "/home/stan/misc/GLKH-1.0/"
 
 
 def coverage_path_planner(map_num, robot, method):
@@ -186,27 +186,24 @@ def coverage_path_planner(map_num, robot, method):
 
 	elif method == 3:
 		print("[%18s] Invoking min_alt decomposition."%tk.current_time())
-		decomposition = [
-			[[(0.0,  0.0), (10.0,  0.0),(1.0, 1.0)],[]],
-			[[(1.0,  1.0), (10.0,  0.0),(9.0, 1.0)],[]],
-			[[(10.0, 0.0), (10.0, 10.0),(9.0, 9.0)],[]],
-			[[(10.0, 0.0), (9.0, 9.0),(9.0, 1.0)],[]],
-			[[(10.0, 10.0),(9.0, 9.0),(1.0, 9.0)],[]],
-			[[(1.0, 9.0), (0.0, 10.0),(10.0, 10.0)],[]],
-#			[[(0.0,  0.0), (1.0, 1.0),(1.0, 9.0),(0.0, 10.0)], []]
-#			[[(0.0,  0.0), (10.0,  0.0),(9.0, 1.0),(1.0, 1.0)],[]],
-#			[[(10.0, 0.0), (10.0, 10.0),(9.0, 9.0), (9.0, 1.0)],[]],
-#			[[(10.0, 10.0),(9.0, 9.0),(1.0, 9.0), (0.0, 10.0)],[]],
-			[[(0.0,  0.0), (1.0, 1.0),(0.0, 10.0)], []],
-			[[(0.0,  10.0), (1.0, 1.0),(1.0, 9.0)], []]
-
-		]
-		#decomposition = greedy_decompose.decompose(P)
+#		decomposition = [
+#			[[(0.0,  0.0), (10.0,  0.0),(1.0, 1.0)],[]],
+#			[[(1.0,  1.0), (10.0,  0.0),(9.0, 1.0)],[]],
+#			[[(10.0, 0.0), (10.0, 10.0),(9.0, 9.0)],[]],
+#			[[(10.0, 0.0), (9.0, 9.0),(9.0, 1.0)],[]],
+#			[[(10.0, 10.0),(9.0, 9.0),(1.0, 9.0)],[]],
+#			[[(1.0, 9.0), (0.0, 10.0),(10.0, 10.0)],[]],
+#			[[(0.0,  0.0), (1.0, 1.0),(0.0, 10.0)], []],
+#			[[(0.0,  10.0), (1.0, 1.0),(1.0, 9.0)], []]
+#		]
+		decomposition = greedy_decompose.decompose(P)
 		print("[%18s] Finished min_alt decomposition."%tk.current_time())
+
 
 		print("[%18s] Forming an adjacency matrix for polygons."%tk.current_time())
 		adjacency_matrix = adjacency.get_adjacency_as_matrix(decomposition)
 		print("[%18s] Adjacency matrix complete."%tk.current_time())
+
 
 		print("[%18s] Forming an adjacency matrix for polygons."%tk.current_time())
 		decomposition = min_alt_decompose.reoptimize(P, decomposition, adjacency_matrix)
@@ -237,11 +234,12 @@ def coverage_path_planner(map_num, robot, method):
 		print("[%18s] Reading the results."%tk.current_time())
 		tour = solver.read_tour("cpp_test")
 
+
 		print("[%18s] Plotting the results."%tk.current_time())		
 		ax = splot.init_axis()
-
 		print("[%18s] Plotting decomposition."%tk.current_time())
 		splot.plot_decomposition(ax, decomposition, adjacency_matrix)
+#		splot.display()
 
 		print("[%18s] Plotting sampling."%tk.current_time())
 		splot.plot_samples(ax, segments)
@@ -258,4 +256,4 @@ def coverage_path_planner(map_num, robot, method):
 if __name__ == "__main__":
 
 	robot = Robot(0.2, "dubins")
-	coverage_path_planner(7, robot, 3)
+	coverage_path_planner(10, robot, 3)

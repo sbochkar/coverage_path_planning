@@ -163,12 +163,12 @@ def find_cut_space(P, v):
 
 	# Debug visualization
 	# Plot the polygon itself
-	import pylab as p
-	x, y = P.exterior.xy
-	p.plot(x, y)
-	x, y = c_of_b.exterior.xy
-	p.plot(x, y)
-	p.show()
+#	import pylab as p
+#	x, y = P.exterior.xy
+#	p.plot(x, y)
+#	x, y = c_of_b.exterior.xy
+#	p.plot(x, y)
+#	p.show()
 
 
 #	print P.is_valid

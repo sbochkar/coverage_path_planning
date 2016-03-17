@@ -1,20 +1,50 @@
-NAME : cpp_test.1001.tour
-COMMENT : Length = 1001
-COMMENT : Found by GLKH [Keld Helsgaun] Thu Mar 17 02:46:36 2016
+NAME : cpp_test.4771.tour
+COMMENT : Length = 4771
+COMMENT : Found by GLKH [Keld Helsgaun] Thu Mar 17 13:28:40 2016
 TYPE : TOUR
-DIMENSION : 12
+DIMENSION : 42
 TOUR_SECTION
-1
+2
+3
 6
+7
+10
+79
+82
+60
+61
+64
+65
+68
+69
+72
+73
+76
+77
+83
+51
+48
+43
+50
+53
+58
+55
+46
+41
+40
+37
+36
+33
 11
-8
-9
-18
-13
-16
+14
+15
 22
 19
+18
+32
+29
+28
+25
 24
-4
 -1
 EOF

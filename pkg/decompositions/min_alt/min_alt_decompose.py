@@ -22,26 +22,29 @@ def combine_polygons_from_decomposition(v, decomposition):
 	new_decomposition = decomposition
 	adj = adjacency.get_adjacency_as_matrix(new_decomposition)
 	shared_edge_tuple = get_first_shared_edge(v, adj)
-	print adj
+	#print adj
 	print("Shared edge tuple: %s"%(shared_edge_tuple,))
 
 	while shared_edge_tuple:
 		p1_id, p2_id, test_edge = shared_edge_tuple
-
+		print("Two adjacent ps: %d, %d"%(p1_id, p2_id))
 		# Get the exterior of the polygon since this is what will be combined
 		P1 = new_decomposition[p1_id][0]
 		P2 = new_decomposition[p2_id][0]
 
+
 		# Combine the two into one polygon
 		P = operations.combine_two_adjacent_polys(P1, P2, test_edge)
-
+		print("Combined chain: %s"%(P,))
 		# Remove P1 and P2 from decomposition set
 		if p1_id > p2_id: new_decomposition.pop(p1_id); new_decomposition.pop(p2_id)
 		else: new_decomposition.pop(p2_id); new_decomposition.pop(p1_id)
-
+		print("Popoed decomp: %s"%(new_decomposition,))
 		# Insert the new polygon in the decomposition, assuming no new holes
 		new_decomposition.append([P, []])
 		adj = adjacency.get_adjacency_as_matrix(new_decomposition)
+		print("Adj: %s"%(adj,))
+		print("Decomp after pop+add: %s"%(new_decomposition,))
 		shared_edge_tuple = get_first_shared_edge(v, adj)
 
 	return new_decomposition
@@ -166,13 +169,14 @@ def reoptimize(P, decomposition, adj):
 		print("V: %s"%(v,))
 		# Combine all polygons in shared_edges to form one polygon
 		new_decomposition = combine_polygons_from_decomposition(v, new_decomposition)
-
+		print("New decomp: %s"%(new_decomposition,))
 		# v should belong to only one polygon at this point
 		adj = adjacency.get_adjacency_as_matrix(new_decomposition)
 		if get_first_shared_edge(v[1], adj): print "COMBINATION INCOMPLETE?"
 
 		# Find the polygon containing v[1] and its altitude
 		P, P_id = get_polygon_containing_point(new_decomposition, v)
+		print("Reflex containing P: %s, %d"%(P,P_id))
 		altitude_P = alt.get_min_altitude(P)
 
 		# Update v within P
