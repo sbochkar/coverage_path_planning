@@ -25,7 +25,7 @@ def compute_costs(P, mapping, radius):
 
 	# Populate the cost matrix
 	for i in range(num_nodes):
-		print(i)
+#		print(i)
 		for j in range(num_nodes):
 
 			q0 = mapping[i][0].get_exit_info(mapping[i][1])
