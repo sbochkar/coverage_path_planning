@@ -12,6 +12,10 @@ def init_axis():
 
 	fig = plt.figure()
 	ax = fig.add_subplot(111)
+	plt.axis("equal")
+
+	ax.get_yaxis().set_ticks([])
+	ax.get_xaxis().set_ticks([])
 
 	return ax
 
@@ -34,7 +38,7 @@ def plot_polygon_outline(ax, polygon):
 	ax.set_ylim([min_y-0.5,max_y+0.5])
 
 
-def plot_decomposition(ax, decomposition, shared_edges):
+def plot_decomposition(ax, decomposition, shared_edges, P):
 	"""
 	Function plots the result of the decomposition.
 	:param ax: Axis object for redundancy
@@ -42,6 +46,9 @@ def plot_decomposition(ax, decomposition, shared_edges):
 	:param cvx_set:A list of convex cells:
 	:retur: None
 	"""
+
+	P = Polygon(*P)
+	minx, miny, maxx, maxy = P.bounds
 
 	# Plot individual cells
 	for poly in decomposition:
@@ -60,8 +67,8 @@ def plot_decomposition(ax, decomposition, shared_edges):
 				x, y = zip(*shared_edges[i][j])
 				ax.plot(x, y, color='red', alpha=0.8, linewidth=3, zorder=2)
 
-#	ax.set_xlim([min_x,max_x])
-#	ax.set_ylim([min_y,max_y])
+	ax.set_xlim([minx-0.5,maxx+0.5])
+	ax.set_ylim([miny-0.5,maxy+0.5])
 
 def plot_samples(ax, segments):
 	"""

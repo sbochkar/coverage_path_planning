@@ -18,6 +18,7 @@ from pkg.costs							import dubins_cost
 from pkg.gtsp.GLKH						import solver
 from pkg.visuals.static					import coverage_plot as splot
 from pkg.analysis						import tour_length
+from pkg.analysis						import tour_area
 from pkg.poly_operations.others			import operations
 
 class Robot:
@@ -84,7 +85,7 @@ def coverage_path_planner(map_num, robot, method):
 		ax = splot.init_axis()
 
 		print("[%18s] Plotting decomposition."%tk.current_time())
-		splot.plot_decomposition(ax, decomposition, adjacency_matrix)
+		splot.plot_decomposition(ax, decomposition, adjacency_matrix, P)
 
 		print("[%18s] Plotting sampling."%tk.current_time())
 		splot.plot_samples(ax, segments)
@@ -94,7 +95,8 @@ def coverage_path_planner(map_num, robot, method):
 		splot.plot_tour_dubins(ax, tour, mapping, width/2)
 
 		print("Tour Length %2f."%tour_length.length(tour, segments, cost_matrix))
-
+		print("Polygon Area: %2f"%tour_area.polygon_area(P))
+		print("Area covered: %2f"%tour_area.covered_area(tour, mapping, width/2))
 		splot.display()
 
 	elif method == 1:
@@ -238,7 +240,7 @@ def coverage_path_planner(map_num, robot, method):
 		print("[%18s] Plotting the results."%tk.current_time())		
 		ax = splot.init_axis()
 		print("[%18s] Plotting decomposition."%tk.current_time())
-		splot.plot_decomposition(ax, decomposition, adjacency_matrix)
+		splot.plot_decomposition(ax, decomposition, adjacency_matrix, P)
 #		splot.display()
 
 		print("[%18s] Plotting sampling."%tk.current_time())
@@ -249,7 +251,8 @@ def coverage_path_planner(map_num, robot, method):
 		splot.plot_tour_dubins(ax, tour, mapping, width/2)
 
 		print("Tour Length %2f."%tour_length.length(tour, segments, cost_matrix))
-
+		print("Polygon Area: %2f"%tour_area.polygon_area(P))
+		print("Area covered: %2f"%tour_area.covered_area(tour, mapping, width/2))
 		splot.display()
 
 	elif method == 4:
@@ -284,4 +287,4 @@ def coverage_path_planner(map_num, robot, method):
 if __name__ == "__main__":
 
 	robot = Robot(0.2, "dubins")
-	coverage_path_planner(11, robot, 2)
+	coverage_path_planner(13, robot, 3)
