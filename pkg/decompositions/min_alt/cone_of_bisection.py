@@ -26,8 +26,8 @@ def compute(P, v):
 
 	# Form an adjacency list for easy access to adjacent edges
 	adj = adj_e.get_edge_adjacency_as_dict(P)
-	print adj
-	print P
+#	print adj
+#	print P
 
 	#Find adjacent edges of v
 	v_l = adj[v][1][1]; v_r = adj[v][0][1]

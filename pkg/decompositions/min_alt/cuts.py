@@ -138,7 +138,7 @@ def find_optimal_cut(P, v):
 		#print("Cut from: %s to %s"%(v[1], case[0]))
 		#print("Alt_l: %2f at %2f, Alt_r: %2f at %2f"%(a_l, degrees(case[1]), a_r, degrees(case[2])))
 
-		if round(a_l+a_r, 5) <= round(min_altitude, 5):
+		if round(a_l+a_r, 5) < round(min_altitude, 5):
 			min_altitude = a_l+a_r
 			min_altitude_idx = case
 		
