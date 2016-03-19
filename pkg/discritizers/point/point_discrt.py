@@ -22,7 +22,7 @@ def discritize_polygon(P, r):
 
 	interiors = []
 	for hole in P[1]:
-		interior = LinearRing(hole).parallel_offset(r, 'right')
+		interior = LinearRing(hole).parallel_offset(r, 'left')
 		interiors.append(interior.coords[:])
 
 	new_P = Polygon(ext.coords[:], interiors)
