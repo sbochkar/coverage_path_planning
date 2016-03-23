@@ -32,8 +32,10 @@ def plot_polygon_outline(ax, polygon):
 	P = Polygon(*polygon)
 	min_x, min_y, max_x, max_y = P.bounds
 
-	patch = PolygonPatch(P, facecolor="#6699cc", edgecolor="#6699cc", alpha=0.5, zorder=1)
+	patch = PolygonPatch(P, fc='white', ec='#6699cc', linewidth=3) # facecolor="#6699cc", edgecolor="#6699cc", alpha=0.5, zorder=1)
 	ax.add_patch(patch)
+	#x, y= P.xy
+	#ax.plot(x,y)
 	ax.set_xlim([min_x-0.5,max_x+0.5])
 	ax.set_ylim([min_y-0.5,max_y+0.5])
 

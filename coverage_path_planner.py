@@ -21,6 +21,7 @@ from pkg.analysis						import tour_length
 from pkg.analysis						import tour_area
 from pkg.poly_operations.others			import operations
 
+
 class Robot:
 	"""
 	Robot class cotaining specs
@@ -157,16 +158,16 @@ def coverage_path_planner(map_num, robot, method):
 		print("[%18s] Obtained mapping."%tk.current_time())
 
 		print("[%18s] Started computing the cost matrix."%tk.current_time())
-		cost_matrix, cluster_list = dubins_cost.compute_costs(P, mapping, width/2)
+#		cost_matrix, cluster_list = dubins_cost.compute_costs(P, mapping, width/2)
 		print("[%18s] Finished computing the cost matrix."%tk.current_time())
 
 		print("[%18s] Generating and launching GTSP instance."%tk.current_time())
-		solver.solve("gtsp_11_coverage", GLKH_LOCATION, cost_matrix, cluster_list)
+#		solver.solve("gtsp_13_coverage", GLKH_LOCATION, cost_matrix, cluster_list)
 		print("[%18s] Sovled GTSP instance."%tk.current_time())
 
 
 		print("[%18s] Reading the results."%tk.current_time())
-		tour = solver.read_tour("gtsp_11_coverage")
+		tour = solver.read_tour("gtsp_13_coverage")
 
 
 		print("[%18s] Plotting the results."%tk.current_time())		
@@ -182,9 +183,10 @@ def coverage_path_planner(map_num, robot, method):
 		#splot.plot_tour(ax, tour, lines, dict_mapping)
 		splot.plot_tour_dubins(ax, tour, mapping, width/2)
 
-		print("Tour Length %2f."%tour_length.length(tour, segments, cost_matrix))
-
+#		print("Tour Length %2f."%tour_length.length(tour, segments, cost_matrix))
 		splot.display()
+		print("Polygon Area: %2f"%tour_area.polygon_area(P))
+		print("Area covered: %2f"%tour_area.covered_area(tour, mapping, width/2))
 
 	elif method == 3:
 		print("[%18s] Invoking min_alt decomposition."%tk.current_time())
@@ -251,9 +253,9 @@ def coverage_path_planner(map_num, robot, method):
 		splot.plot_tour_dubins(ax, tour, mapping, width/2)
 
 		print("Tour Length %2f."%tour_length.length(tour, segments, cost_matrix))
+		splot.display()
 		print("Polygon Area: %2f"%tour_area.polygon_area(P))
 		print("Area covered: %2f"%tour_area.covered_area(tour, mapping, width/2))
-		splot.display()
 
 	elif method == 4:
 		print("[%18s] Populating the free space with segments."%tk.current_time())
@@ -287,4 +289,4 @@ def coverage_path_planner(map_num, robot, method):
 if __name__ == "__main__":
 
 	robot = Robot(0.2, "dubins")
-	coverage_path_planner(13, robot, 3)
+	coverage_path_planner(13, robot, 2)
