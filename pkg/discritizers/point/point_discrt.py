@@ -17,6 +17,8 @@ def discritize_polygon(P, r):
 	:return: List of grid points
 	"""
 
+	separation_distance = r*math.sqrt(2)
+
 	## Shrink the P
 	ext = LinearRing(P[0]).parallel_offset(r, 'left')
 
@@ -28,11 +30,9 @@ def discritize_polygon(P, r):
 	new_P = Polygon(ext.coords[:], interiors)
 	minx, miny, maxx, maxy = new_P.bounds
 
-	x_spacing = r*math.sqrt(2)
-	y_spacing = r*math.sqrt(2)
 
-	x_range = list(np.arange(minx, maxx, x_spacing))
-	y_range = list(np.arange(miny, maxy, y_spacing))
+	x_range = list(np.arange(minx, maxx, separation_distance))
+	y_range = list(np.arange(miny, maxy, separation_distance))
 
 	## Test if points are inside the polygon, and generate a list of points
 	segments = []
