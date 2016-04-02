@@ -22,7 +22,7 @@ def check_for_overlap(edge1, edge2):
 		coords: Coordinates of the overlap
 	"""
 
-	ls_edge1 = LineString(edge1).buffer(BUFFER_RADIUS)
+	ls_edge1 = LineString(edge1).buffer(BUFFER_RADIUS, cap_style=2)
 	ls_edge2 = LineString(edge2)
 
 	intersection = ls_edge1.intersection(ls_edge2)
