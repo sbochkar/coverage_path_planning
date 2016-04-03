@@ -1,5 +1,6 @@
 from shapely.geometry import Polygon
 from shapely.geometry import LineString
+from shapely.geometry import MultiLineString
 from shapely.geometry import Point
 
 
@@ -38,11 +39,11 @@ def decomposing_line_cut_by_splicing(P, v, w):
 	distance_to_w = chain.project(w_Point)
 
 	if not chain.intersects(v_Point):
-		print "decomposing_cut_as_line: V not on chain"
+		print("decomposing_cut_as_line: V not on chain")
 	if not chain.intersects(w_Point):
-		print "decomposing_cut_as_line: W not on chain"
+		print("decomposing_cut_as_line: W not on chain")
 	if distance_to_w == distance_to_v:
-		print "decomposing_cut_as_line: W and V are the same"
+		print("decomposing_cut_as_line: W and V are the same")
 
 
 	if distance_to_w >= chain.length or distance_to_w == 0:
@@ -130,7 +131,7 @@ def cut_linestring(line, distance):
 
 
 def decomposing_poly_cut_by_set_op(P, v, w, epsilon=10e-6):
-	"""Decomposing cut splitting a polygon into two.
+	"""Decomposing cut splitting a polygon into two where cut is a thin box.
 
 	Decomposing cut which operates on a single simple chain. It is important
 	that P be a simple chain for decomposing cut to generate a shape. If a cut
@@ -142,8 +143,7 @@ def decomposing_poly_cut_by_set_op(P, v, w, epsilon=10e-6):
 	avoid polygons with selft intersecting chains.
 
 	Assumptions:
-		* v and w both are on the chain on P
-		* v and w are not adjacent, otherwise returns a line and a polygon
+		* cut is in the interior of P
 
 	Args:
 		P: Polygon as a tuple (ext, inters)
@@ -156,22 +156,80 @@ def decomposing_poly_cut_by_set_op(P, v, w, epsilon=10e-6):
 	"""
 
 
-	poly = Polygon(*P)
-	line_seed = LineString([v, w])
-	cut_poly = line_seed.buffer(epsilon, cap_style=2)
+	v_Point = Point(v)
+	w_Point = Point(w)
 
-	result = poly.symmetric_difference(cut_poly)
+	chain = LineString(P[0]+[P[0][0]])
 
+	distance_to_v = chain.project(v_Point)
+	distance_to_w = chain.project(w_Point)
+
+	if not chain.intersects(v_Point):
+		print("decomposing_cut_as_line: V not on chain")
+	if not chain.intersects(w_Point):
+		print("decomposing_cut_as_line: W not on chain")
+	if distance_to_w == distance_to_v:
+		print("decomposing_cut_as_line: W and V are the same")
+
+
+
+	# Filter result by the geometric type
 	if result.geom_type == "MultiPolygon":
 
-		for poly in list(result):
-			print poly.exterior
+		resultant_polys = list(result)
+		print resultant_polys[1]
+		if len(resultant_polys) > 2:
+			print("poly_cut_by_set_op: Forbidden cut generated more then 2 polygons")
+
+		# Convert to vertex representation of poylgons
+		holes = []
+		p_l = [list(resultant_polys[0].exterior.coords)]
+		for hole in list(resultant_polys[0].interiors):
+			holes.append(hole.coords[:])
+		p_l.append(holes)
+
+		holes = []
+		p_r = [list(resultant_polys[1].exterior.coords)]
+		for hole in list(resultant_polys[1].interiors):
+			holes.append(hole.coords[:])
+		p_r.append(holes)
+
+		return p_l, p_r
 
 	elif result.geom_type == "Polygon":
-		pass
+		
+		holes = []
+		p_l = [list(result.exterior.coords)]
+		for hole in list(result.interiors):
+			holes.append(hole.coords[:])
+		p_l.append(holes)
+
+		return p_l, None
 
 
 
 
-P = [(0,0), (10,0),(10,10),(0,10)], [[(4,4),(4,6),(6,6),(6,4)]]
-decomposing_poly_cut_by_set_op(P, (4,4), (0,0))
+#ext = [(0.0, 0.0),
+#		(4.0,  0.0),
+#		(5.0,  1.0),
+#		(6.0,  0.0),
+#		(10.0, 0.0),
+#		(10.0, 5.0),
+#		(6.0,  5.0),
+#		(5.0,  4.0),
+#		(4.0,  5.0),
+#		(0.0,  5.0)]
+#
+#holes = [
+#			[(6,1),
+#			(6,4),
+#			(9,4),
+#			(9,1)]
+#		]
+#P = [ext, holes]
+#print poly_cut_by_set_op(P, (5,1), (5,4))
+
+line = LineString([(0,0), (1,0), (2,0)])
+edge = MultiLineString([[(0,0), (0.5,0)], [(1.5,0), (2,0)]])
+
+print line.symmetric_difference(edge)
