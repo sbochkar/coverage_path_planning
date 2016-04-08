@@ -267,14 +267,62 @@ def decomposing_poly_cut_by_set_op(P, v, w, epsilon=10e-2):
 		print("splice_polygon: No correct cut combination found!")
 		return
 
-	cut_pt_1 = chain.interpolate(v_l_displacements[i]).coords[:]
-	cut_pt_2 = chain.interpolate(v_r_displacements[i]).coords[:]
-	cut_pt_3 = chain.interpolate(w_l_displacements[j]).coords[:]
-	cut_pt_4 = chain.interpolate(w_r_displacements[j]).coords[:]
+	v_l = chain.interpolate(v_l_displacements[i]).coords[:]
+	v_r = chain.interpolate(v_r_displacements[i]).coords[:]
+	w_l = chain.interpolate(w_l_displacements[j]).coords[:]
+	w_r = chain.interpolate(w_r_displacements[j]).coords[:]
 
-	cut_poly = Polygon(cut_pt_1+cut_pt_2+cut_pt_3+cut_pt_4)
+	def get_verts(v_l, v_r):
+		"""Function for extraction verts between two points
+		"""
+
+		v_l = v_l%chain.length
+		v_r = v_r%chain.length
+
+		points = []
+		coords = list(chain.coords)
+		if v_r > v_l:
+
+			for i in range(1, len(coords)):
+			
+				pd = LineString(coords[:i+1]).length
+
+				if pd > v_l and pd < v_r:
+					points.append(coords[i])
+		else:
+
+			for i in range(1, len(coords)):
+			
+				pd = LineString(coords[:i+1]).length
+
+				if pd > v_l:
+					points.append(coords[i])
+
+			for i in range(1, len(coords)):
+			
+				pd = LineString(coords[:i+1]).length
+
+				if pd < v_r:
+					points.append(coords[i])
+
+
+		return points
+
+	# Find all vertecies of the chain betwee v_l and v_r
+	v_pts = get_verts(v_l_displacements[i], v_r_displacements[i])
+	w_pts = get_verts(w_l_displacements[j], w_r_displacements[j])
+
+	poly = Polygon(*P)
+
+	cut_poly = Polygon(v_l+v_pts+v_r+w_l+w_pts+w_r)
+	cut_poly = poly.intersection(cut_poly)
+
 	print cut_poly
 
+	p_l, p_r = poly.difference(cut_poly)
+
+	print p_l
+	print p_r
 #	# Filter result by the geometric type
 #	if result.geom_type == "MultiPolygon":
 #
@@ -331,4 +379,4 @@ holes = [
 P = [ext, holes]
 
 
-print decomposing_poly_cut_by_set_op(P, (0,10e-2), (5,1))
+print decomposing_poly_cut_by_set_op(P, (5,1), (5,4))
