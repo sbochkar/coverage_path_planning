@@ -6,4 +6,3 @@ solver_logs
 pkg/gtsp/solver_logs/
 cpp_test.gtsp
 *.log
-*.pyc

@@ -161,8 +161,6 @@ def decomposing_poly_cut_by_set_op(P, v, w, epsilon=10e-2):
 	"""
 
 
-	getcontext().prec = 28
-
 	v_Point = Point(v)
 	w_Point = Point(w)
 
@@ -379,4 +377,9 @@ holes = [
 P = [ext, holes]
 
 
-print decomposing_poly_cut_by_set_op(P, (5,1), (5,4))
+#print decomposing_poly_cut_by_set_op(P, (5,1), (5,4))
+
+line = LineString([(0,0),(2,1)])
+point = line.interpolate(10e-6/3)
+print point
+print line.intersects(point)
