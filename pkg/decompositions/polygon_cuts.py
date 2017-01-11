@@ -161,18 +161,10 @@ def decomposing_poly_cut_by_set_op(P, v, w, epsilon=10e-2):
 	"""
 
 
-	getcontext().prec = 28
-
 	v_Point = Point(v)
 	w_Point = Point(w)
 
 	chain = LineString(P[0]+[P[0][0]])
-
-	if not chain.intersects(v_Point):
-		print("decomposing_poly_cut_as_line: V not on chain")
-	if not chain.intersects(w_Point):
-		print("decomposing_poly_cut_as_line: W not on chain")
-
 
 	distance_to_v = chain.project(v_Point)
 	distance_to_w = chain.project(w_Point)
@@ -183,8 +175,8 @@ def decomposing_poly_cut_by_set_op(P, v, w, epsilon=10e-2):
 
 	# Generate pairs of v and w modified by some epsilon amount 
 	v_l_displacements = [distance_to_v+(i*epsilon) for i in [-1, -2, 0]]
-	v_r_displacements = [(distance_to_v+(i*epsilon))%chain.length for i in [1, 0, 2]]
 	w_l_displacements = [distance_to_w+(i*epsilon) for i in [-1, -2, 0]]
+	v_r_displacements = [(distance_to_v+(i*epsilon))%chain.length for i in [1, 0, 2]]
 	w_r_displacements = [(distance_to_w+(i*epsilon))%chain.length for i in [1, 0, 2]]
 
 	def splice_polygon(dist_v, dist_w):
@@ -218,6 +210,7 @@ def decomposing_poly_cut_by_set_op(P, v, w, epsilon=10e-2):
 			left_w_chain, right_w_chain = cut_linestring(chain, dist_w)
 
 			common = LineString(left_w_chain).difference(LineString(left_v_chain))
+			print common
 
 			p_l = left_v_chain.coords[:]+right_w_chain.coords[:-1]
 			p_r = common.coords[:]
@@ -242,20 +235,21 @@ def decomposing_poly_cut_by_set_op(P, v, w, epsilon=10e-2):
 		for j in range(len(w_l_displacements)):
 
 			# Check if resultant polygons are valid
-			p_l, p_r = splice_polygon(v_l_displacements[i], w_r_displacements[j])
+			p_l, temp = splice_polygon(v_l_displacements[i], w_r_displacements[j])
 			p_l_lr = LinearRing(p_l+[p_l[0]])
+			p_r_lr = LinearRing(temp+[temp[0]])
+
+			if not p_l_lr.is_valid or not p_r_lr.is_valid:
+				continue
+
+			temp, p_r = splice_polygon(v_r_displacements[i], w_l_displacements[j])
+			p_l_lr = LinearRing(temp+[temp[0]])
 			p_r_lr = LinearRing(p_r+[p_r[0]])
 
 			if not p_l_lr.is_valid or not p_r_lr.is_valid:
 				continue
 
-			p_l, p_r = splice_polygon(v_r_displacements[i], w_l_displacements[j])
-			p_l_lr = LinearRing(p_l+[p_l[0]])
-			p_r_lr = LinearRing(p_r+[p_r[0]])
-
-			if not p_l_lr.is_valid or not p_r_lr.is_valid:
-				continue
-
+			print p_l, p_r
 			# Else, we have a valid candidate cut
 			found = True
 			break
@@ -267,10 +261,16 @@ def decomposing_poly_cut_by_set_op(P, v, w, epsilon=10e-2):
 		print("splice_polygon: No correct cut combination found!")
 		return
 
+	print i, j
+	print p_l
+	print p_r
+	p_l_ext = p_l
+	p_r_ext = p_r
 	v_l = chain.interpolate(v_l_displacements[i]).coords[:]
 	v_r = chain.interpolate(v_r_displacements[i]).coords[:]
 	w_l = chain.interpolate(w_l_displacements[j]).coords[:]
 	w_r = chain.interpolate(w_r_displacements[j]).coords[:]
+	print v_l, v_r, w_l, w_r
 
 	def get_verts(v_l, v_r):
 		"""Function for extraction verts between two points
@@ -317,9 +317,18 @@ def decomposing_poly_cut_by_set_op(P, v, w, epsilon=10e-2):
 	cut_poly = Polygon(v_l+v_pts+v_r+w_l+w_pts+w_r)
 	cut_poly = poly.intersection(cut_poly)
 
-	print cut_poly
-
 	p_l, p_r = poly.difference(cut_poly)
+
+	p_l_holes = []
+	p_r_holes = []
+
+	for hole in p_l.interiors:
+		p_l_holes.append(hole)
+	for hole in p_r.interiors:
+		p_r_holes.append(hole)
+
+	p_l = Polygon(p_l_ext, p_l_holes)
+	p_r = Polygon(p_r_ext, p_r_holes)
 
 	print p_l
 	print p_r
@@ -379,4 +388,6 @@ holes = [
 P = [ext, holes]
 
 
-print decomposing_poly_cut_by_set_op(P, (5,1), (5,4))
+line = LineString([(0,0),(1,0)])
+print line.project(Point((0.5,-1)))
+#print decomposing_poly_cut_by_set_op(P, (5,1), (5,4))
