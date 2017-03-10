@@ -1,4 +1,50 @@
 from shapely.geometry import LinearRing
+from ...poly_operations.others import adjacency as adj
+
+
+def fuse_polys_around_vertex(v, decomposition):
+
+	# Build a set of all shared edges in the decomposition which shared v
+	new_decomposition = decomposition
+	adjacency = adj.get_adjacency_as_matrix(new_decomposition)
+	shared_edge_tuple = get_first_shared_edge(v, adjacency)
+	#print adj
+#	print("Shared edge tuple: %s"%(shared_edge_tuple,))
+
+	while shared_edge_tuple:
+		p1_id, p2_id, test_edge = shared_edge_tuple
+#		print("Two adjacent ps: %d, %d"%(p1_id, p2_id))
+#		# Get the exterior of the polygon since this is what will be combined
+		P1 = new_decomposition[p1_id][0]
+		P2 = new_decomposition[p2_id][0]
+
+
+		# Combine the two into one polygon
+		polygon = combine_two_adjacent_polys(P1, P2, test_edge)
+#		print("Combined chain: %s"%(polygon,))
+		# Remove P1 and P2 from decomposition set
+		if p1_id > p2_id: new_decomposition.pop(p1_id); new_decomposition.pop(p2_id)
+		else: new_decomposition.pop(p2_id); new_decomposition.pop(p1_id)
+#		print("Popoed decomp: %s"%(new_decomposition,))
+		# Insert the new polygon in the decomposition, assuming no new holes
+		new_decomposition.append([polygon, []])
+		adjacency = adj.get_adjacency_as_matrix(new_decomposition)
+#		print("Adj: %s"%(adj,))
+#		print("Decomp after pop+add: %s"%(new_decomposition,))
+		shared_edge_tuple = get_first_shared_edge(v, adjacency)
+
+	return new_decomposition
+
+
+def get_first_shared_edge(v, adj):
+
+	for i in range(len(adj)):
+		for j in range(i, len(adj)):
+
+			if not adj[i][j] is None:
+				if v[1] in adj[i][j]:
+					return (i, j, adj[i][j])
+	return []
 
 
 def combine_two_adjacent_polys(p1, p2, e):

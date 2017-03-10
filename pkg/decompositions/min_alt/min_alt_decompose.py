@@ -5,53 +5,95 @@ import operator
 import itertools
 
 
-def get_first_shared_edge(v, adj):
+def reoptimize(workspace, decomposition):
+	"""
+	Reoptimize a decomposition for minimum overall altitude of workspace.
 
-	for i in range(len(adj)):
-		for j in range(i, len(adj)):
+	Assumes the decomposition on workspace is convex.
 
-			if not adj[i][j] is None:
-				if v[1] in adj[i][j]:
-					return (i, j, adj[i][j])
-	return []
+	:param workspace: A polygon, possibly with holes, that was decomposed.
+	:param decomposition: Convex decomposition performed on polygon.
+	:param adj: Adjacency graph for decomposition.
+	:return decomposition: Modified decomposition.
+	"""
+
+	reflex_verts = rlx.find_reflex_vertices(workspace)
+
+	while reflex_verts:
+
+		reflex_vert = reflex_verts.pop()
+
+		# Decomposition is modified in-place
+		decomposition = ops.fuse_polys_around_vertex(reflex_vert, decomposition)
+		
+		adjacency_matrix = adj.get_adjacency_as_matrix(decomposition)
+
+		cell, cell_id = find_poly_containing_vertex(decomposition, reflex_vert)
+		# If multiple polygon were found, this will pick the first one.
+		if not cell:
+			print("[ERROR] Did not find a polygon containing a vertex!")
+			# The operation failed on this vertex, try the next one.
+			continue
+
+		min_alt, min_theta = alt.get_min_altitude(cell)
+
+		# Update v within cell
+		test_lr = LinearRing(cell[0])
+		if not test_lr.is_ccw: cell[0] = cell[0][::-1]
+		v_new = update_v_id(cell, reflex_vert)
+
+		# Find an optimal cut from v[1] within cell
+		cut = cuts.find_optimal_cut(cell, v_new)
+#		print("Proposed cut: %s"%(cut,))
+		# Evaluate the potential optimal cut
+		if cut and cut is not None: # Not empty
+			p_l, p_r = cuts.perform_cut(cell, [reflex_vert[1], cut[0]])
+
+			p_l = round_vertecies(p_l)
+			p_r = round_vertecies(p_r)
+			#print p_l
+			#print p_r
+			altitude_pl = alt.get_min_altitude([p_l,[]])
+			altitude_pr = alt.get_min_altitude([p_r,[]])
+
+			# If cut improves altitude
+			if altitude_pr+altitude_pl < min_alt:
+
+				decomposition.pop(cell_id)
+				decomposition.append([p_l, []])
+				decomposition.append([p_r, []])
+
+				# Need to process all polygons in the decomposition to introduce
+				# 	aditional veritices where cuts were made
+				decomposition = post_processs_decomposition(decomposition)
+				#print decompsition
+#		print("Decomp. after one reflex: %s"%(decomposition,))
+	#print decomposition
+	return decomposition
 
 
-def combine_polygons_from_decomposition(v, decomposition):
+def old_decompose(polygon):
+	"""
+	Mininimum altitude decomposition.
+	
+	[Older Implementation] Holes are recombines with the boundar via vertical
+	cuts.
 
-	# Build a set of all shared edges in the decomposition which shared v
-	new_decomposition = decomposition
-	adj = adjacency.get_adjacency_as_matrix(new_decomposition)
-	shared_edge_tuple = get_first_shared_edge(v, adj)
-	#print adj
-#	print("Shared edge tuple: %s"%(shared_edge_tuple,))
+	:param polygon: Polygin in the standard form.
+	:return decomposition: A set of polygons representing a decomposition
+	"""
 
-	while shared_edge_tuple:
-		p1_id, p2_id, test_edge = shared_edge_tuple
-#		print("Two adjacent ps: %d, %d"%(p1_id, p2_id))
-#		# Get the exterior of the polygon since this is what will be combined
-		P1 = new_decomposition[p1_id][0]
-		P2 = new_decomposition[p2_id][0]
+	min_alt, min_theta = alt.min_altitude(polygon)
+	P_fused, modified_edges = chain_combination.combine_chains(polygon, min_theta)
 
+	recursive_cuts(P_fused)
 
-		# Combine the two into one polygon
-		P = operations.combine_two_adjacent_polys(P1, P2, test_edge)
-#		print("Combined chain: %s"%(P,))
-		# Remove P1 and P2 from decomposition set
-		if p1_id > p2_id: new_decomposition.pop(p1_id); new_decomposition.pop(p2_id)
-		else: new_decomposition.pop(p2_id); new_decomposition.pop(p1_id)
-#		print("Popoed decomp: %s"%(new_decomposition,))
-		# Insert the new polygon in the decomposition, assuming no new holes
-		new_decomposition.append([P, []])
-		adj = adjacency.get_adjacency_as_matrix(new_decomposition)
-#		print("Adj: %s"%(adj,))
-#		print("Decomp after pop+add: %s"%(new_decomposition,))
-		shared_edge_tuple = get_first_shared_edge(v, adj)
-
-	return new_decomposition
+	return list_of_polygons
 
 
 
-def get_polygon_containing_point(decomposition, v):
+
+def find_poly_containing_vertex(decomposition, v):
 	"""
 	"""
 
@@ -59,18 +101,21 @@ def get_polygon_containing_point(decomposition, v):
 
 		chain = decomposition[i][0]
 
-		if v[1] in chain: return decomposition[i], i
+		if v[1] in chain:
+			return decomposition[i], i
+
+	return []
 
 
-def update_v_id(P, v):
+def update_v_id(polygon, v):
 
-	for i in range(len(P[0])):
-		if v[1] == P[0][i]: return (i, v[1])
+	for i in range(len(polygon[0])):
+		if v[1] == polygon[0][i]: return (i, v[1])
 
 
-def round_vertecies(p):
+def round_vertecies(polygon):
 	new_p = []
-	for v in p:
+	for v in polygon:
 		new_p.append((round(v[0],5), round(v[1],5)))
 	return new_p
 
@@ -152,123 +197,32 @@ def post_processs_decomposition(decomp):
 	return decomp
 
 
-def reoptimize(P, decomposition, adj):
-	"""
-	Assuming running on convex decomposition
-	"""
 
-	# Build a set of reflex verticies
-	new_decomposition = decomposition
-	R = reflex.find_reflex_vertices(P)
-
-	while R:
-		# Pick one reflex vertex from R
-		v = R.pop()
-
-#		print("Old decomp: %s"%(new_decomposition,))
-#		print("V: %s"%(v,))
-		# Combine all polygons in shared_edges to form one polygon
-		new_decomposition = combine_polygons_from_decomposition(v, new_decomposition)
-#		print("New decomp: %s"%(new_decomposition,))
-		# v should belong to only one polygon at this point
-		adj = adjacency.get_adjacency_as_matrix(new_decomposition)
-		if get_first_shared_edge(v[1], adj): print "COMBINATION INCOMPLETE?"
-
-		# Find the polygon containing v[1] and its altitude
-		P, P_id = get_polygon_containing_point(new_decomposition, v)
-#		print("Reflex containing P: %s, %d"%(P,P_id))
-		altitude_P = alt.get_min_altitude(P)
-
-		# Update v within P
-		test_lr = LinearRing(P[0])
-		if not test_lr.is_ccw: P[0] = P[0][::-1]
-		v_new = update_v_id(P, v)
-
-		# Find an optimal cut from v[1] within P
-		cut = cuts.find_optimal_cut(P, v_new)
-#		print("Proposed cut: %s"%(cut,))
-		# Evaluate the potential optimal cut
-		if cut and cut is not None: # Not empty
-			p_l, p_r = cuts.perform_cut(P, [v[1], cut[0]])
-
-			p_l = round_vertecies(p_l)
-			p_r = round_vertecies(p_r)
-			#print p_l
-			#print p_r
-			altitude_pl = alt.get_min_altitude([p_l,[]])
-			altitude_pr = alt.get_min_altitude([p_r,[]])
-
-			# If cut improves altitude
-			if altitude_pr+altitude_pl < altitude_P:
-
-				decomposition.pop(P_id)
-				decomposition.append([p_l, []])
-				decomposition.append([p_r, []])
-
-				# Need to process all polygons in the decomposition to introduce
-				# 	aditional veritices where cuts were made
-				decomposition = post_processs_decomposition(decomposition)
-				#print decompsition
-#		print("Decomp. after one reflex: %s"%(decomposition,))
-	#print decomposition
-	return decomposition
-
-
-
-
-
-def decompose(P):
-	"""
-	Min altitude decomposition.
-
-	1: Connect all simple chains of a polygon
-	2: Perform a series of decomposing cuts
-	3: Run an iterative minimization step to reoptimize cuts
-
-	:param P: Polygin in the standard form
-	:return decomposition: A set of polygons
-	"""
-
-	min_alt, theta = alt.get_min_altitude(P)
-	#print("Min Alt: %2f, Theta: %2f"%(min_alt, 180*theta/3.14))
-	P_fused, modified_edges = chain_combination.combine_chains(P, theta)
-
-	#D = recursive_cuts(P_fused)
-	recursive_cuts(P_fused)
-	#print("List of polygons after recursion: %s"%(list_of_polygons,))
-
-	# Need a smarter way of doing this
-	#if len(D) == 2:
-	#	if not D[1]:
-	#		D = [D]
-
-
-	return list_of_polygons
 
 
 list_of_polygons = []
-def recursive_cuts(P):
+def recursive_cuts(polygon):
 	"""
 	Recursive cut of Polygon
 	"""
 
-	R = reflex.find_reflex_vertices(P)
-	while R:
-		v = R.pop()
+	reflex_verts = reflex.find_reflex_vertices(polygon)
+	while reflex_verts:
+		v = reflex_verts.pop()
 
-		cut = cuts.find_optimal_cut(P, v)
+		cut = cuts.find_optimal_cut(polygon, v)
 		#print("Ref: %s"%(v[1],))
 		#print("Cut: %s"%(cut,))
 
 		if cut and cut is not None: # Not empty
-			p_l, p_r = cuts.perform_cut(P, [v[1], cut[0]])
+			p_l, p_r = cuts.perform_cut(polygon, [v[1], cut[0]])
 
 			#return [recursive_cuts([p_l,[]]), recursive_cuts([p_r,[]])]
 			recursive_cuts([p_l,[]])
 			recursive_cuts([p_r,[]])
 			return
-	#return P
-	list_of_polygons.append(P)
+	#return polygon
+	list_of_polygons.append(polygon)
 
 
 if __name__ == '__main__':
@@ -281,7 +235,7 @@ else:
 	from ...aux.altitudes import altitude as alt
 	from ...decompositions.min_alt import cuts
 	from ...poly_operations.others import chain_combination
-	from ...poly_operations.others import reflex
-	from ...poly_operations.others import operations
-	from ...poly_operations.others import adjacency
+	from ...poly_operations.others import reflex as rlx
+	from ...poly_operations.others import operations as ops
+	from ...poly_operations.others import adjacency as adj
 	from ...aux.geometry import edges

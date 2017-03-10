@@ -31,7 +31,7 @@ class Robot:
 		self.dynamics = dynamics
 
 
-GLKH_LOCATION = "/home/sbochkar/misc/GLKH-1.0/"
+GLKH_LOCATION = "/home/stan/misc/GLKH-1.0/"
 
 
 def coverage_path_planner(map_num, robot, method):
@@ -104,7 +104,6 @@ def coverage_path_planner(map_num, robot, method):
 		print("[%18s] Invoking min_alt decomposition."%tk.current_time())
 		decomposition = min_alt_decompose.decompose(P)
 		print("[%18s] Finished min_alt decomposition."%tk.current_time())
-	#	print decomposition
 
 		print("[%18s] Forming an adjacency matrix for polygons."%tk.current_time())
 		adjacency_matrix = adjacency.get_adjacency_as_matrix(decomposition)
@@ -134,7 +133,7 @@ def coverage_path_planner(map_num, robot, method):
 		ax = splot.init_axis()
 
 		print("[%18s] Plotting decomposition."%tk.current_time())
-		splot.plot_decomposition(ax, decomposition, adjacency_matrix)
+		splot.plot_decomposition(ax, decomposition, adjacency_matrix, P)
 
 		print("[%18s] Plotting sampling."%tk.current_time())
 		splot.plot_samples(ax, segments)
@@ -158,11 +157,9 @@ def coverage_path_planner(map_num, robot, method):
 		print("[%18s] Obtained mapping."%tk.current_time())
 
 		print("[%18s] Started computing the cost matrix."%tk.current_time())
-#		cost_matrix, cluster_list = dubins_cost.compute_costs(P, mapping, width/2)
 		print("[%18s] Finished computing the cost matrix."%tk.current_time())
 
 		print("[%18s] Generating and launching GTSP instance."%tk.current_time())
-#		solver.solve("gtsp_13_coverage", GLKH_LOCATION, cost_matrix, cluster_list)
 		print("[%18s] Sovled GTSP instance."%tk.current_time())
 
 
@@ -183,7 +180,6 @@ def coverage_path_planner(map_num, robot, method):
 		#splot.plot_tour(ax, tour, lines, dict_mapping)
 		splot.plot_tour_dubins(ax, tour, mapping, width/2)
 
-#		print("Tour Length %2f."%tour_length.length(tour, segments, cost_matrix))
 		splot.display()
 		print("Polygon Area: %2f"%tour_area.polygon_area(P))
 		print("Area covered: %2f"%tour_area.covered_area(tour, mapping, width/2))
@@ -210,7 +206,7 @@ def coverage_path_planner(map_num, robot, method):
 
 
 		print("[%18s] Forming an adjacency matrix for polygons."%tk.current_time())
-		decomposition = min_alt_decompose.reoptimize(P, decomposition, adjacency_matrix)
+		decomposition = min_alt_decompose.reoptimize(P, decomposition)
 		print("[%18s] Adjacency matrix complete."%tk.current_time())
 
 		print("[%18s] Forming an adjacency matrix for polygons."%tk.current_time())
@@ -289,4 +285,4 @@ def coverage_path_planner(map_num, robot, method):
 if __name__ == "__main__":
 
 	robot = Robot(0.2, "dubins")
-	coverage_path_planner(13, robot, 2)
+	coverage_path_planner(11, robot, 3)
