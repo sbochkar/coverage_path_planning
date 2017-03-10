@@ -201,7 +201,7 @@ def coverage_path_planner(map_num, robot, method):
 
 
 		print("[%18s] Forming an adjacency matrix for polygons."%tk.current_time())
-		adjacency_matrix = adjacency.get_adjacency_as_matrix(decomposition)
+		adjacency_matrix = adjacency.compute_adjacency_matrix(decomposition)
 		print("[%18s] Adjacency matrix complete."%tk.current_time())
 
 
@@ -210,7 +210,7 @@ def coverage_path_planner(map_num, robot, method):
 		print("[%18s] Adjacency matrix complete."%tk.current_time())
 
 		print("[%18s] Forming an adjacency matrix for polygons."%tk.current_time())
-		adjacency_matrix = adjacency.get_adjacency_as_matrix(decomposition)
+		adjacency_matrix = adjacency.compute_adjacency_matrix(decomposition)
 		print("[%18s] Adjacency matrix complete."%tk.current_time())
 
 

@@ -3,10 +3,16 @@ from ...poly_operations.others import adjacency as adj
 
 
 def fuse_polys_around_vertex(v, decomposition):
+	"""
+	Fuse all cells that contain the vertex
 
-	# Build a set of all shared edges in the decomposition which shared v
-	new_decomposition = decomposition
-	adjacency = adj.get_adjacency_as_matrix(new_decomposition)
+	:param v: The vertex.
+	:param decomposition: A decomposition containing a lis of cells. Modified
+							in place
+	:return None:
+	"""
+
+	adjacency = adj.compute_adjacency_matrix(decomposition)
 	shared_edge_tuple = get_first_shared_edge(v, adjacency)
 	#print adj
 #	print("Shared edge tuple: %s"%(shared_edge_tuple,))
@@ -15,25 +21,25 @@ def fuse_polys_around_vertex(v, decomposition):
 		p1_id, p2_id, test_edge = shared_edge_tuple
 #		print("Two adjacent ps: %d, %d"%(p1_id, p2_id))
 #		# Get the exterior of the polygon since this is what will be combined
-		P1 = new_decomposition[p1_id][0]
-		P2 = new_decomposition[p2_id][0]
+		P1 = decomposition[p1_id][0]
+		P2 = decomposition[p2_id][0]
 
 
 		# Combine the two into one polygon
 		polygon = combine_two_adjacent_polys(P1, P2, test_edge)
 #		print("Combined chain: %s"%(polygon,))
 		# Remove P1 and P2 from decomposition set
-		if p1_id > p2_id: new_decomposition.pop(p1_id); new_decomposition.pop(p2_id)
-		else: new_decomposition.pop(p2_id); new_decomposition.pop(p1_id)
+		if p1_id > p2_id: decomposition.pop(p1_id); decomposition.pop(p2_id)
+		else: decomposition.pop(p2_id); decomposition.pop(p1_id)
 #		print("Popoed decomp: %s"%(new_decomposition,))
 		# Insert the new polygon in the decomposition, assuming no new holes
-		new_decomposition.append([polygon, []])
-		adjacency = adj.get_adjacency_as_matrix(new_decomposition)
+		decomposition.append([polygon, []])
+		adjacency = adj.compute_adjacency_matrix(decomposition)
 #		print("Adj: %s"%(adj,))
 #		print("Decomp after pop+add: %s"%(new_decomposition,))
 		shared_edge_tuple = get_first_shared_edge(v, adjacency)
 
-	return new_decomposition
+	return decomposition
 
 
 def get_first_shared_edge(v, adj):

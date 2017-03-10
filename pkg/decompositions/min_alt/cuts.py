@@ -2,6 +2,7 @@ from shapely.geometry import Polygon
 from shapely.geometry import Point
 from shapely.geometry import LinearRing
 from shapely.geometry import LineString
+from shapely.geometry import MultiPoint
 from shapely.geometry.polygon import orient
 
 
@@ -130,6 +131,14 @@ def find_optimal_cut(P, v):
 	#print("R: %s Points of interest: %s"%(v[1], pois,))
 	# Evaluate all transition points
 	for case in pois:
+
+		PP = LinearRing(P[0])
+		ee = LineString([v[1], case[0]])
+
+
+		if type(PP.intersection(ee)) is not MultiPoint:
+			continue
+
 		p_l, p_r = perform_cut(P, [v[1], case[0]])
 		a_l = alt.get_altitude([p_l, []], case[1])
 		a_r = alt.get_altitude([p_r, []], case[2])
@@ -157,19 +166,20 @@ def find_cut_space(P, v):
 
 #	print v
 	c_of_b = cone_of_bisection.compute(P, v)
-	c_of_b = Polygon(c_of_b)
-
+	print P, v
+	print c_of_b
 	P = Polygon(*P)
 
 	# Debug visualization
 	# Plot the polygon itself
-#	import pylab as p
-#	x, y = P.exterior.xy
-#	p.plot(x, y)
-#	x, y = c_of_b.exterior.xy
-#	p.plot(x, y)
-#	p.show()
+	import pylab as p
+	x, y = P.exterior.xy
+	p.plot(x, y)
+	#x, y = c_of_b.exterior.xy
+	#p.plot(x, y)
+	p.show()
 
+	c_of_b = Polygon(c_of_b)
 
 #	print P.is_valid
 	#print P
@@ -554,18 +564,19 @@ def perform_cut(P, e):
 				p_l = remaining.coords[:]
 				p_r = right_chain.coords[:]		
 			else:
-	#			print "here"
-				#print chain
 				cut_v_1, cut_v_2 = cut(chain, distance_to_w)
-				#print("Cut1: %s"%cut_v_1)
-				#print("Cut2: %s"%cut_v_2)
 
 
 				distance_to_v = cut_v_2.project(Point(v))
 	#			print("Dist: %2f. Length: %2f"%(distance_to_v, cut_v_2.length) )
 				right_chain, remaining = cut(cut_v_2, distance_to_v)
+
+				if remaining:
+					p_l = cut_v_1.coords[:]+remaining.coords[:-1]
+				else:
+					p_l = cut_v_1.coords[:]
+
 	#			print remaining.coords[:]
-				p_l = cut_v_1.coords[:]+remaining.coords[:-1]
 				p_r = right_chain.coords[:]
 	#			p_l = right_chain.coords[:] 
 	#			p_r = remaining.coords[:]+cut_v_1.coords[:]
@@ -581,7 +592,7 @@ def cut(line, distance):
 	"""
 	# Cuts a line in two at a distance from its starting point
 	if distance <= 0.0 or distance >= line.length:
-		print("ERROR: CUT BEYONG LENGTH")
+		print("[ERROR]: Cut beyond the length of the polygon!")
 		print line
 		print(distance)
 		return [LineString(line), []]

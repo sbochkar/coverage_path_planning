@@ -26,7 +26,7 @@ def reoptimize(workspace, decomposition):
 		# Decomposition is modified in-place
 		decomposition = ops.fuse_polys_around_vertex(reflex_vert, decomposition)
 		
-		adjacency_matrix = adj.get_adjacency_as_matrix(decomposition)
+		adjacency_matrix = adj.compute_adjacency_matrix(decomposition)
 
 		cell, cell_id = find_poly_containing_vertex(decomposition, reflex_vert)
 		# If multiple polygon were found, this will pick the first one.

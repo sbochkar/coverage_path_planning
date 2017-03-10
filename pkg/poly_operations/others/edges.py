@@ -18,8 +18,7 @@ def check_for_overlap(edge1, edge2):
 		edge2: x,y of second edge
 
 	Returns:
-		has_overlap: Is there overlap
-		coords: Coordinates of the overlap
+		coords: Coordinates of the overlap. []] o.w.
 	"""
 
 	ls_edge1 = LineString(edge1).buffer(BUFFER_RADIUS, cap_style=2)
@@ -31,8 +30,8 @@ def check_for_overlap(edge1, edge2):
 	if intersection.geom_type == "LineString":
 		if intersection.length > 100*BUFFER_RADIUS:
 			coords = intersection.coords[:]
-			return True, coords
+			return coords
 		else:
-			return False, None
+			return []
 	else:
-		return False, None
+		return []
