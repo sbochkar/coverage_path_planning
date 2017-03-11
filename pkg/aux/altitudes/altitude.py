@@ -1,14 +1,20 @@
 
 
-def get_min_altitude(P):
+def compute_min_altitude(P):
 	"""
 	Function perofrm a series of call to get_altitude, to find the min altitude
 	Things to look out for:
-		min_alt init value might not be high ebough
+		min_alt init value might not be high enough.
+
+	:param poly: Polygon in standard form.
+
+	:return min_alt: Minimum altitude.
+	:return min_theta: Direction of minimum altitude.
 
 	"""
 
 	dirs = directions.get_directions_set(P)
+
 
 	min_alt = 1000000000
 	min_dir = 0
@@ -18,6 +24,9 @@ def get_min_altitude(P):
 			min_alt = test_alt
 			min_dir = theta
 
+	print min_dir
+	min_dir = min(dirs, key=lambda d: get_altitude(P, d))
+	print min_dir
 	return min_alt, min_dir
 
 
@@ -42,7 +51,7 @@ def get_altitude(P, theta):
 
 	#print("Starting with theta:%f\n"%theta)
 	P = rotation.rotate_polygon(P, -theta)
-	adj = ae.get_edge_adjacency_as_dict(P)
+	adj = ae.compute_edge_adjacency_dict(P)
 
 	# Sort by x-coordinate
 	sorted_by_x = sorted(adj.keys(), key=lambda pt: pt[1][0])
@@ -131,11 +140,11 @@ if __name__ == '__main__':
 		import os, sys
 		sys.path.insert(0, os.path.abspath("../.."))
 		from aux.geometry import rotation
-		from poly_operations.others import adjacency_edges as ae
+		from poly_operations.others import adjacency as ae
 		from poly_operations.others import directions
 else:
 	from ...aux.geometry import rotation
-	from ...poly_operations.others import adjacency_edges as ae
+	from ...poly_operations.others import adjacency as ae
 	from ...poly_operations.others import directions
 
 #print get_min_altitude(([[(0,0),(2,0),(2,1),(0,1)], []]))

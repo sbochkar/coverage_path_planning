@@ -25,7 +25,7 @@ def compute(P, v):
 	rad = sqrt((maxx-minx)**2+(maxy-miny)**2)	# "Dimater" of the polygon
 
 	# Form an adjacency list for easy access to adjacent edges
-	adj = adj_e.get_edge_adjacency_as_dict(P)
+	adj = adj_e.compute_edge_adjacency_dict(P)
 #	print adj
 #	print P
 
@@ -82,4 +82,4 @@ if __name__ == '__main__':
 		from aux.geometry import rotation
 		import reflex
 else:
-	from ...poly_operations.others import adjacency_edges as adj_e
+	from ...poly_operations.others import adjacency as adj_e

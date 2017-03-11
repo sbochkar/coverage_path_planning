@@ -25,7 +25,7 @@ def discritize(P, width):
 	:return lines: a set of segments which could be lines of points
 	"""
 
-	altitude, theta = alt.get_min_altitude(P)
+	altitude, theta = alt.compute_min_altitude(P)
 	segments = populate_with_lines(P, width, theta)
 
 	return segments

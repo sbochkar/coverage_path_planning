@@ -14,7 +14,7 @@ def find_reflex_vertices(P):
 	"""
 
 	R = []
-	adj_dict = adj.get_edge_adjacency_as_dict(P)
+	adj_dict = adj.compute_edge_adjacency_dict(P)
 
 	for v in adj_dict.keys():
 		p_0 = adj_dict[v][1]
@@ -34,7 +34,6 @@ if __name__ == '__main__':
 	if __package__ is None:
 		import os, sys
 		sys.path.insert(0, os.path.abspath("../.."))
-		#from poly_operations.others import adjancency_edges
-		import adjacency_edges as adj
+		import adjacency as adj
 else:
-	import adjacency_edges as adj
+	import adjacency as adj

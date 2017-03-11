@@ -644,4 +644,4 @@ else:
 	from ...poly_operations.others import chain_combination
 	from ...poly_operations.others import reflex
 	from ...poly_operations.others import directions
-	from ...poly_operations.others import adjacency_edges as adj_e
+	from ...poly_operations.others import adjacency as adj_e

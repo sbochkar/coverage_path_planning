@@ -14,6 +14,7 @@ def reoptimize(workspace, decomposition):
 	:param workspace: A polygon, possibly with holes, that was decomposed.
 	:param decomposition: Convex decomposition performed on polygon.
 	:param adj: Adjacency graph for decomposition.
+	
 	:return decomposition: Modified decomposition.
 	"""
 
@@ -23,51 +24,45 @@ def reoptimize(workspace, decomposition):
 
 		reflex_vert = reflex_verts.pop()
 
-		# Decomposition is modified in-place
-		decomposition = ops.fuse_polys_around_vertex(reflex_vert, decomposition)
-		
-		adjacency_matrix = adj.compute_adjacency_matrix(decomposition)
-
-		cell, cell_id = find_poly_containing_vertex(decomposition, reflex_vert)
-		# If multiple polygon were found, this will pick the first one.
+		cell, cells_id = ops.fuse_polys_around_v(reflex_vert, decomposition)
 		if not cell:
-			print("[ERROR] Did not find a polygon containing a vertex!")
-			# The operation failed on this vertex, try the next one.
+			print("[ERROR] Fusing cells resulted in empty cell!")
 			continue
 
-		min_alt, min_theta = alt.get_min_altitude(cell)
+		min_alt, min_theta = alt.compute_min_altitude(cell)
 
-		# Update v within cell
-		test_lr = LinearRing(cell[0])
-		if not test_lr.is_ccw: cell[0] = cell[0][::-1]
-		v_new = update_v_id(cell, reflex_vert)
-
-		# Find an optimal cut from v[1] within cell
-		cut = cuts.find_optimal_cut(cell, v_new)
-#		print("Proposed cut: %s"%(cut,))
-		# Evaluate the potential optimal cut
-		if cut and cut is not None: # Not empty
-			p_l, p_r = cuts.perform_cut(cell, [reflex_vert[1], cut[0]])
-
-			p_l = round_vertecies(p_l)
-			p_r = round_vertecies(p_r)
-			#print p_l
-			#print p_r
-			altitude_pl = alt.get_min_altitude([p_l,[]])
-			altitude_pr = alt.get_min_altitude([p_r,[]])
-
-			# If cut improves altitude
-			if altitude_pr+altitude_pl < min_alt:
-
-				decomposition.pop(cell_id)
-				decomposition.append([p_l, []])
-				decomposition.append([p_r, []])
-
-				# Need to process all polygons in the decomposition to introduce
-				# 	aditional veritices where cuts were made
-				decomposition = post_processs_decomposition(decomposition)
-				#print decompsition
-#		print("Decomp. after one reflex: %s"%(decomposition,))
+#		# Update v within cell
+#		test_lr = LinearRing(cell[0])
+#		if not test_lr.is_ccw:
+#			cell[0] = cell[0][::-1]
+#		v_new = update_v_id(cell, reflex_vert)
+#
+#		# Find an optimal cut from v[1] within cell
+#		cut = cuts.find_optimal_cut(cell, v_new)
+#		#print("Proposed cut: %s"%(cut,))
+#		# Evaluate the potential optimal cut
+#		if cut and cut is not None: # Not empty
+#			p_l, p_r = cuts.perform_cut(cell, [reflex_vert[1], cut[0]])
+#
+#			p_l = round_vertecies(p_l)
+#			p_r = round_vertecies(p_r)
+#			#print p_l
+#			#print p_r
+#			altitude_pl = alt.get_min_altitude([p_l,[]])
+#			altitude_pr = alt.get_min_altitude([p_r,[]])
+#
+#			# If cut improves altitude
+#			if altitude_pr+altitude_pl < min_alt:
+#
+#				decomposition.pop(cell_id)
+#				decomposition.append([p_l, []])
+#				decomposition.append([p_r, []])
+#
+#				# Need to process all polygons in the decomposition to introduce
+#				# 	aditional veritices where cuts were made
+#				decomposition = post_processs_decomposition(decomposition)
+#				#print decompsition
+	#print("Decomp. after one reflex: %s"%(decomposition,))
 	#print decomposition
 	return decomposition
 

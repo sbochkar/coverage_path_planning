@@ -21,7 +21,7 @@ def compute_adjacency_matrix(polys):
 	adj_mtx = [[None for i in range(len(polys))] for i in range(len(polys))]
 
 	# Add indicies to polygons for easier references later.
-	poly_idx = enumerate(polys)
+	poly_idx = list(enumerate(polys))
 	for item_a, item_b in itertools.combinations(poly_idx, 2):
 
 		poly_a_idx, poly_a = item_a
@@ -31,8 +31,11 @@ def compute_adjacency_matrix(polys):
 		poly_b = poly_b[0]
 
 		# Convert polygon verts to pairs of verts representing edges.
-		edges_a = [(poly_a[i], poly_a[i+1]) for i in range(len(poly_a)-1)]
-		edges_b = [(poly_b[i], poly_b[i+1]) for i in range(len(poly_b)-1)]
+		n_a = len(poly_a)
+		n_b = len(poly_b)
+
+		edges_a = [(poly_a[i], poly_a[(i+1)%n_a]) for i in range(n_a)]
+		edges_b = [(poly_b[i], poly_b[(i+1)%n_b]) for i in range(n_b)]
 
 		for edge_1, edge_2 in itertools.product(edges_a, edges_b):
 
@@ -53,3 +56,40 @@ def compute_adjacency_matrix(polys):
 					adj_mtx[poly_b_idx][poly_a_idx] = overlap_coords			
 
 	return adj_mtx
+
+
+def compute_edge_adjacency_dict(P):
+	"""
+	Thie function will form an adjacency list representing polyong's edges.
+
+	:param P: polygon specified in the form of a tuple (ext, [int]). ext is a
+			list of (x, y) tuples specifying the exterior of a polygon ccw.
+			[int] is a list of lists of (x, y) tupeles specifying holes of a
+			polygon cw.
+
+	Returns:
+		dict: Dict representing an adjacency list of P
+	"""
+
+	ext = P[0]
+	holes = P[1] 
+
+	adjacency_dict = {}
+
+	n = len(ext)
+	for i in range(n):
+		unique_id = i, ext[i]
+		next_id = (i+1)%n, ext[(i+1)%n]
+		prev_id = (i-1)%n, ext[(i-1)%n]
+		adjacency_dict[unique_id] = [next_id, prev_id]
+
+	ext_n = n
+	for hole in holes:
+		n = len(hole)
+		for i in range(n):
+			unique_id = i+ext_n, hole[i]
+			next_id = ((i+1)%n)+ext_n, hole[(i+1)%n]
+			prev_id = ((i-1)%n)+ext_n, hole[(i-1)%n]
+			adjacency_dict[unique_id] = [next_id, prev_id]
+
+	return adjacency_dict	
