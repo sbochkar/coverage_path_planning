@@ -30,11 +30,12 @@ def compute(P, v):
 #	print P
 
 	#Find adjacent edges of v
-	v_l = adj[v][1][1]; v_r = adj[v][0][1]
+	v_l = adj[v][1]
+	v_r = adj[v][0]
 
 	# Find the angle of v_l with the x-axis
-	theta_l = atan2(v_l[1]-v[1][1], v_l[0]-v[1][0])
-	theta_r = atan2(v_r[1]-v[1][1], v_r[0]-v[1][0])
+	theta_l = atan2(v_l[1]-v[1], v_l[0]-v[0])
+	theta_r = atan2(v_r[1]-v[1], v_r[0]-v[0])
 
 	# Consider several cases which will determine the measurement for the cone of bisection
 	if theta_l < 0 and theta_r < 0:
@@ -54,21 +55,21 @@ def compute(P, v):
 
 	p = []
 
-	p.append(v[1])
+	p.append(v)
 	for i in np.arange(orientation-angle/2,orientation+angle/2,0.1):
 		x = rad*cos(i)
 		y = rad*sin(i)
 
-		new_x = v[1][0]+x
-		new_y = v[1][1]+y
+		new_x = v[0]+x
+		new_y = v[1]+y
 
 		p.append((new_x, new_y))
 
 	x = rad*cos(orientation+angle/2)
 	y = rad*sin(orientation+angle/2)
 
-	new_x = v[1][0]+x
-	new_y = v[1][1]+y
+	new_x = v[0]+x
+	new_y = v[1]+y
 
 	p.append((new_x, new_y))
 

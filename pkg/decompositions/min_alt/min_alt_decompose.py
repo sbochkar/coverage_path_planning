@@ -31,39 +31,56 @@ def reoptimize(workspace, decomposition):
 
 		min_alt, min_theta = alt.compute_min_altitude(cell)
 
-#		# Update v within cell
-#		test_lr = LinearRing(cell[0])
-#		if not test_lr.is_ccw:
-#			cell[0] = cell[0][::-1]
-#		v_new = update_v_id(cell, reflex_vert)
-#
-#		# Find an optimal cut from v[1] within cell
-#		cut = cuts.find_optimal_cut(cell, v_new)
-#		#print("Proposed cut: %s"%(cut,))
-#		# Evaluate the potential optimal cut
-#		if cut and cut is not None: # Not empty
-#			p_l, p_r = cuts.perform_cut(cell, [reflex_vert[1], cut[0]])
-#
-#			p_l = round_vertecies(p_l)
-#			p_r = round_vertecies(p_r)
-#			#print p_l
-#			#print p_r
-#			altitude_pl = alt.get_min_altitude([p_l,[]])
-#			altitude_pr = alt.get_min_altitude([p_r,[]])
-#
-#			# If cut improves altitude
-#			if altitude_pr+altitude_pl < min_alt:
-#
-#				decomposition.pop(cell_id)
-#				decomposition.append([p_l, []])
-#				decomposition.append([p_r, []])
-#
-#				# Need to process all polygons in the decomposition to introduce
-#				# 	aditional veritices where cuts were made
-#				decomposition = post_processs_decomposition(decomposition)
-#				#print decompsition
-	#print("Decomp. after one reflex: %s"%(decomposition,))
-	#print decomposition
+		# Verification that the exterior is ccw.
+		if not LinearRing(cell[0]).is_ccw:
+			cell = [cell[0][::-1], cell[1]]
+
+
+		cut = cuts.compute_optimal_cut(cell, reflex_vert)
+		print("[INFO] Optimal cut: %s"%(cut,))
+
+		if cut:
+			poly_a, poly_b = cuts.perform_cut(cell, [reflex_vert, cut])
+			#print("[INFO] Polygon_a: %s"%(poly_a))
+			#print("[INFO] Polygon_b: %s"%(poly_b))
+
+			poly_a = round_vertecies(poly_a)
+			poly_b = round_vertecies(poly_b)
+
+			altitude_pl = alt.compute_min_altitude([poly_a,[]])
+			altitude_pr = alt.compute_min_altitude([poly_b,[]])
+
+			# If cut improves altitude
+			if altitude_pr+altitude_pl < min_alt:
+				print("[INFO] Improving cut was found!")
+
+				for cell_id in sorted(cells_id, reverse=True):
+					decomposition.pop(cell_id)
+
+				decomposition.append([p_l, []])
+				decomposition.append([p_r, []])
+
+				decomposition = post_processs_decomposition(decomposition)
+
+			else:
+				print("[INFO] Assuming the cell union is best.")
+
+				for cell_id in sorted(cells_id, reverse=True):
+					decomposition.pop(cell_id)
+
+				decomposition.append(cell)
+
+				decomposition = post_processs_decomposition(decomposition)
+		else:
+			print("[INFO] Assuming the cell union is best.")
+
+			for cell_id in sorted(cells_id, reverse=True):
+				decomposition.pop(cell_id)
+
+			decomposition.append(cell)
+
+			decomposition = post_processs_decomposition(decomposition)
+
 	return decomposition
 
 

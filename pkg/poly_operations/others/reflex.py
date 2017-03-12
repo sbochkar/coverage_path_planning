@@ -21,10 +21,10 @@ def find_reflex_vertices(P):
 		p_1 = v
 		p_2 = adj_dict[v][0]
 
-		dx_1 = float(p_1[1][0])-float(p_0[1][0])
-		dy_1 = float(p_1[1][1])-float(p_0[1][1])
-		dx_2 = float(p_2[1][0])-float(p_1[1][0])
-		dy_2 = float(p_2[1][1])-float(p_1[1][1])
+		dx_1 = float(p_1[0])-float(p_0[0])
+		dy_1 = float(p_1[1])-float(p_0[1])
+		dx_2 = float(p_2[0])-float(p_1[0])
+		dy_2 = float(p_2[1])-float(p_1[1])
 		if dx_1*dy_2-dy_1*dx_2 < 0.0:
 			R.append(p_1)
 	return R

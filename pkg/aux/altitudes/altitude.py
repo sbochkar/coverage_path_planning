@@ -15,18 +15,9 @@ def compute_min_altitude(P):
 
 	dirs = directions.get_directions_set(P)
 
-
-	min_alt = 1000000000
-	min_dir = 0
-	for theta in dirs:
-		test_alt = get_altitude(P, theta)
-		if test_alt <= min_alt:
-			min_alt = test_alt
-			min_dir = theta
-
-	print min_dir
 	min_dir = min(dirs, key=lambda d: get_altitude(P, d))
-	print min_dir
+	min_alt = get_altitude(P, min_dir)
+
 	return min_alt, min_dir
 
 
@@ -54,8 +45,7 @@ def get_altitude(P, theta):
 	adj = ae.compute_edge_adjacency_dict(P)
 
 	# Sort by x-coordinate
-	sorted_by_x = sorted(adj.keys(), key=lambda pt: pt[1][0])
-	#print("Sorted list of points: %s"%(sorted_by_x,))
+	sorted_by_x = sorted(adj.keys(), key=lambda pt: pt[0])
 
 	altitude = 0
 	active_event_counter = 0
@@ -68,13 +58,9 @@ def get_altitude(P, theta):
 		if v in checked_verts:
 			continue
 
-		x_v, y_v = v[1]
-		x_adj_1, y_adj_1 = adj[v][0][1]
-		x_adj_2, y_adj_2 = adj[v][1][1]
-		#print("Current : %s"%(v,))	
-		#print("Next adj: %s"%((x_adj_1, y_adj_1),))	
-		#print("Prev adj: %s"%((x_adj_2, y_adj_2),))	
-		#print("%d, %5f, %s"%(active_event_counter, altitude,v))
+		x_v, y_v = v
+		x_adj_1, y_adj_1 = adj[v][0]
+		x_adj_2, y_adj_2 = adj[v][1]
 
 		# Increment the altitude accordingly
 		if i>0:
@@ -106,11 +92,6 @@ def get_altitude(P, theta):
 				active_event_counter -= 1
 				checked_verts.append(adj[v][0])
 
-#		print("Test point: (%f, %f)"%(current_x, current_y))
-#		print("Adj1 point: (%f, %f)"%(adjacent_x_1, adjacent_y_1))
-#		print("Adj2 point: (%f, %f)"%(adjacent_x_2, adjacent_y_2))
-#		print("Counter: %d"%active_event_counter)
-#		print("Altitude: %f"%altitude)
 	return altitude
 
 
@@ -124,8 +105,8 @@ def resolve_local_equality(adj_list, v, prev):
 	if prev in adj:
 		adj.remove(prev)
 
-	x_v, x_y = v[1]
-	x, y = adj[0][1]
+	x_v, x_y = v
+	x, y = adj[0]
 
 	if x > x_v:
 		return 1

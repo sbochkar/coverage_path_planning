@@ -74,7 +74,7 @@ def find_containing_polys(v, adj):
 		for j in range(i, len(adj)):
 
 			if not adj[i][j] is None:
-				if v[1] in adj[i][j]:
+				if v in adj[i][j]:
 					shared_edge_tuples.append((i, j, adj[i][j]))
 
 	return shared_edge_tuples

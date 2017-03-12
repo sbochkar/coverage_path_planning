@@ -28,8 +28,8 @@ def form_collinear_dictionary(s, v):
 	collinear_dict = {}
 	# Check all pairs of si in s, to see if their endpoitns are collinear
 	for si in s:
-		if collinear(v[1], si[0], si[1]):
-			if euc_distance(v[1], si[0]) < euc_distance(v[1], si[1]):
+		if collinear(v, si[0], si[1]):
+			if euc_distance(v, si[0]) < euc_distance(v, si[1]):
 				collinear_dict[si[1]] = si[0]
 			else:
 				collinear_dict[si[0]] = si[1]
@@ -47,29 +47,29 @@ def form_collinear_dictionary(s, v):
 
 
 		# Case 1 to consider	
-		if collinear(v[1], pt_l1, pt_r1):
-			if euc_distance(v[1], pt_l1) < euc_distance(v[1], pt_r1):
+		if collinear(v, pt_l1, pt_r1):
+			if euc_distance(v, pt_l1) < euc_distance(v, pt_r1):
 				collinear_dict[pt_r1] = pt_l1
 			else:
 				collinear_dict[pt_l1] = pt_r1
 
 		# Case 2 to consider	
-		if collinear(v[1], pt_l2, pt_r1):
-			if euc_distance(v[1], pt_l2) < euc_distance(v[1], pt_r1):
+		if collinear(v, pt_l2, pt_r1):
+			if euc_distance(v, pt_l2) < euc_distance(v, pt_r1):
 				collinear_dict[pt_r1] = pt_l2
 			else:
 				collinear_dict[pt_l2] = pt_r1
 
 		# Case 3 to consider	
-		if collinear(v[1], pt_l2, pt_r2):
-			if euc_distance(v[1], pt_l2) < euc_distance(v[1], pt_r2):
+		if collinear(v, pt_l2, pt_r2):
+			if euc_distance(v, pt_l2) < euc_distance(v, pt_r2):
 				collinear_dict[pt_r2] = pt_l2
 			else:
 				collinear_dict[pt_l2] = pt_r2
 
 		# Case 4 to consider	
-		if collinear(v[1], pt_l1, pt_r2):
-			if euc_distance(v[1], pt_l1) < euc_distance(v[1], pt_r2):
+		if collinear(v, pt_l1, pt_r2):
+			if euc_distance(v, pt_l1) < euc_distance(v, pt_r2):
 				collinear_dict[pt_r2] = pt_l1
 			else:
 				collinear_dict[pt_l1] = pt_r2
@@ -77,37 +77,38 @@ def form_collinear_dictionary(s, v):
 	return collinear_dict
 
 
-def find_optimal_cut(P, v):
+def compute_optimal_cut(poly, vert):
 	"""
+	Function computes pair-wise optimal cut that minimizes altitude.
+
+	:param poly: Polygon in standard form.
+	:param vert: vertex
+
+	:return cut: A pair of (x,y) tuples representing an optimal cut
 	Find optimal cut
 	"""
 
-	pois = []
-
-	min_altitude, theta = alt.get_min_altitude(P)
-
-	s = find_cut_space(P, v)
-#	print("Cut space: %s"%(s,))
+	cut_candidates = []
 	min_altitude_idx = None
 
+	min_altitude, min_theta = alt.compute_min_altitude(poly)
+
+	s = find_cut_space(poly, vert)
+	#print("[INFO] Refl vert: %s"%(vert,))
+	#print("[INFO] Cut space: %s"%s)
+	
 	# First, find edges on cut space that are collinear with reflex vertex
-	collinear_dict = form_collinear_dictionary(s, v)
-#	print collinear_dict
-#	for i in range(1, len(s)):
-#		si = [s[i-1], s[i]]
+	collinear_dict = form_collinear_dictionary(s, vert)
+
 	for si in s:
+
 		# Process each edge si, have to be cw
-		lr_si = LinearRing([v[1]]+si)
-		if lr_si.is_ccw:
-			#print lr_si
-			#print lr_si.is_ccw
+		if LinearRing([vert]+si).is_ccw:
 			si = [si[1]]+[si[0]]
-			#print si
 
 
 		cut_point = si[0]
-		#print P, v, cut_point
-		p_l, p_r = perform_cut(P, [v[1], cut_point])
+		p_l, p_r = perform_cut(poly, [vert, cut_point])
 
 		dirs_left = directions.get_directions_set([p_l, []])
 		dirs_right = directions.get_directions_set([p_r, []])
@@ -120,26 +121,26 @@ def find_optimal_cut(P, v):
 		# Look for all transition points
 		for dir1 in dirs_left:
 			for dir2 in dirs_right:
-				tp = find_best_transition_point(si, v[1], dir1, dir2)
+				tp = find_best_transition_point(si, vert, dir1, dir2)
 				# Here check if tp is collinear with v
 				# If so and invisible, replace with visible collinear point
 				if tp in collinear_dict.keys():
-					pois.append((collinear_dict[tp], dir1, dir2))
+					cut_candidates.append((collinear_dict[tp], dir1, dir2))
 				else:
-					pois.append((tp, dir1, dir2))
+					cut_candidates.append((tp, dir1, dir2))
 
-	#print("R: %s Points of interest: %s"%(v[1], pois,))
+	#print("R: %s Points of interest: %s"%(v[1], cut_candidates,))
 	# Evaluate all transition points
-	for case in pois:
+	for case in cut_candidates:
 
-		PP = LinearRing(P[0])
-		ee = LineString([v[1], case[0]])
+		PP = LinearRing(poly[0])
+		ee = LineString([vert, case[0]])
 
 
 		if type(PP.intersection(ee)) is not MultiPoint:
 			continue
 
-		p_l, p_r = perform_cut(P, [v[1], case[0]])
+		p_l, p_r = perform_cut(poly, [vert, case[0]])
 		a_l = alt.get_altitude([p_l, []], case[1])
 		a_r = alt.get_altitude([p_r, []], case[2])
 
@@ -155,29 +156,35 @@ def find_optimal_cut(P, v):
 	#print min_altitude, min_altitude_idx[0], degrees(min_altitude_idx[1]), degrees(min_altitude_idx[2])
 #	print v[1]
 #	print min_altitude_idx
-	return min_altitude_idx
+	if min_altitude_idx:
+		return min_altitude_idx[0]
+	else:
+		return []
 
 
 def find_cut_space(P, v):
 	"""
-	Generate the cut space at v using Visilibity library.
+	Function computes a cut space.
+
+	:param poly: A polygon in standard form.
+	:param vert: A vertex that is the origin of the cut space.
+
+	:return cut_space: A polygon representing the cut space.
 	"""
 
-
-#	print v
 	c_of_b = cone_of_bisection.compute(P, v)
-	print P, v
-	print c_of_b
+	#print P, v
+	#print c_of_b
 	P = Polygon(*P)
 
 	# Debug visualization
 	# Plot the polygon itself
-	import pylab as p
-	x, y = P.exterior.xy
-	p.plot(x, y)
+	#import pylab as p
+	#x, y = P.exterior.xy
+	#p.plot(x, y)
 	#x, y = c_of_b.exterior.xy
 	#p.plot(x, y)
-	p.show()
+	#p.show()
 
 	c_of_b = Polygon(c_of_b)
 

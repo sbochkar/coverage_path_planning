@@ -1,6 +1,7 @@
 import itertools
 import edges
 from math import sqrt
+from shapely.geometry import LineString
 
 
 def compute_adjacency_matrix(polys):
@@ -78,18 +79,18 @@ def compute_edge_adjacency_dict(P):
 
 	n = len(ext)
 	for i in range(n):
-		unique_id = i, ext[i]
-		next_id = (i+1)%n, ext[(i+1)%n]
-		prev_id = (i-1)%n, ext[(i-1)%n]
+		unique_id = ext[i]
+		next_id = ext[(i+1)%n]
+		prev_id = ext[(i-1)%n]
 		adjacency_dict[unique_id] = [next_id, prev_id]
 
 	ext_n = n
 	for hole in holes:
 		n = len(hole)
 		for i in range(n):
-			unique_id = i+ext_n, hole[i]
-			next_id = ((i+1)%n)+ext_n, hole[(i+1)%n]
-			prev_id = ((i-1)%n)+ext_n, hole[(i-1)%n]
+			unique_id = hole[i]
+			next_id = hole[(i+1)%n]
+			prev_id = hole[(i-1)%n]
 			adjacency_dict[unique_id] = [next_id, prev_id]
 
 	return adjacency_dict	

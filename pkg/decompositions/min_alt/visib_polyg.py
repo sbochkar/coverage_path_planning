@@ -12,7 +12,7 @@ def compute(v, P):
 	epsilon = 0.01
 
 	#Using the visilibity library, define the reflex vertex
-	observer = vis.Point(*v[1])
+	observer = vis.Point(*v)
 
 	# To put into standard form, do this
 	if not LinearRing(P[0]).is_ccw:
