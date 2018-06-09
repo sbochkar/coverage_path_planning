@@ -1,0 +1,3 @@
+OUTPUT_TOUR_FILE = cpp_test.tour
+RUNS = 1
+PROBLEM_FILE = cpp_test.gtsp

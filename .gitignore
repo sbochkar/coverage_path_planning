@@ -1,3 +1,4 @@
+*.pyc
 old
 *.tour
 *.gtsp
