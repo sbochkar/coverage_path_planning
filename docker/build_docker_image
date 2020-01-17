@@ -1,0 +1,3 @@
+IMAGE_NAME=sbochkarev/cpp_dev:latest
+
+docker build -t ${IMAGE_NAME} ./
