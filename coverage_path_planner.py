@@ -1,13 +1,13 @@
 #Local modules
 from pkg.time_keeping import time_keeping as tk
 from pkg.poly_operations.hard_coded_lib import polygon_library
-#from pkg.decompositions import adjacency
+from pkg.decompositions import adjacency
 from pkg.decompositions.greedy import greedy_decompose
 #from pkg.decompositions.min_alt import min_alt_decompose
-#from pkg.discritizers.line import min_alt_discrt
+from pkg.discritizers.line import min_alt_discrt
 #from pkg.discritizers.point import point_discrt
-#from pkg.discritizers import get_mapping
-#from pkg.costs import dubins_cost
+from pkg.discritizers import get_mapping
+from pkg.costs import dubins_cost
 #from pkg.gtsp.GLKH import solver
 #from pkg.visuals.static	import coverage_plot as splot
 #from pkg.analysis import tour_length
@@ -283,8 +283,8 @@ if __name__ == "__main__":
 
     # Generating a polygon
     logger.info("Generating a polygon.")
-    polygon = polygon_library.polygon_generator(13)
+    polygon = polygon_library.polygon_generator(1)
     logger.info("Polygon generated.")
 
     robot = Robot(0.2, "dubins")
-    coverage_path_planner(polygon, robot, 3)
+    coverage_path_planner(polygon, robot, 0)

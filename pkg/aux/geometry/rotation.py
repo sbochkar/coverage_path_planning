@@ -22,7 +22,7 @@ def rotate_points(vertices, theta):
 
 	n = len(vertices)
 	if not n:
-		print "rotate: points list EMPTY!"
+		print("rotate: points list EMPTY!")
 		return None
 
 	new_points = []
@@ -55,7 +55,7 @@ def rotate_polygon(P, theta):
 
 	n = len(P[0])
 	if not n:
-		print "rotate: polygon list EMPTY!"
+		print("rotate: polygon list EMPTY!")
 		return None
 
 	ext = []

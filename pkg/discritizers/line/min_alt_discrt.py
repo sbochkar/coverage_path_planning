@@ -69,7 +69,7 @@ def populate_with_lines(P, width, theta):
 		lr_new_holes.append(offset_hole)
 
 	if offset_ext.is_empty:
-		print offset_ext
+		print(offset_ext)
 		print("Line generation ERROR: Shrunk polygon is not valid")
 		return []
 	
