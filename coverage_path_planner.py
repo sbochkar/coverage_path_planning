@@ -1,292 +1,290 @@
-
-
-#Global imports
-import math
-from enum import Enum
-from shapely.geometry import LineString
-
 #Local modules
-from pkg.time_keeping					import time_keeping as tk
+from pkg.time_keeping import time_keeping as tk
 from pkg.poly_operations.hard_coded_lib import polygon_library
-from pkg.poly_operations.others			import adjacency
-from pkg.decompositions.greedy 			import greedy_decompose
-from pkg.decompositions.min_alt			import min_alt_decompose
-from pkg.discritizers.line 				import min_alt_discrt
-from pkg.discritizers.point 			import point_discrt
-from pkg.discritizers	 				import get_mapping
-from pkg.costs							import dubins_cost
-from pkg.gtsp.GLKH						import solver
-from pkg.visuals.static					import coverage_plot as splot
-from pkg.analysis						import tour_length
-from pkg.analysis						import tour_area
-from pkg.poly_operations.others			import operations
+#from pkg.decompositions import adjacency
+from pkg.decompositions.greedy import greedy_decompose
+#from pkg.decompositions.min_alt import min_alt_decompose
+#from pkg.discritizers.line import min_alt_discrt
+#from pkg.discritizers.point import point_discrt
+#from pkg.discritizers import get_mapping
+#from pkg.costs import dubins_cost
+#from pkg.gtsp.GLKH import solver
+#from pkg.visuals.static	import coverage_plot as splot
+#from pkg.analysis import tour_length
+#from pkg.analysis import tour_area
+#from pkg.poly_operations.others	import operations
 
-
-class Robot:
-	"""
-	Robot class cotaining specs
-	"""
-	def __init__(self, footprint_width, dynamics):
-		self.footprint_width = footprint_width
-		self.dynamics = dynamics
+from log_utils import get_logger
 
 
 GLKH_LOCATION = "/home/sbochkar/misc/GLKH-1.0/"
 
 
-def coverage_path_planner(map_num, robot, method):
-	"""
-	Wrapper for all avaialble path planners
-
-	:param map_num: Id of a map
-	:param method: Method to use for planning
-	:param robot: RObot specs
-	:return path: Coverage path
-	"""
-
-
-	# Generating a polygon
-	print("[%18s] Generating a polygon."%tk.current_time())
-	P = polygon_library.polygon_generator(map_num)
-	print("[%18s] Polygon generated."%tk.current_time())
-	
-	width = 2*robot.footprint_width
-
-	if method == 0: # Greed convex decomposion method
-
-		print("[%18s] Invoking greedy decomposition."%tk.current_time())
-		decomposition = greedy_decompose.decompose(P)
-		print("[%18s] Finished greedy decomposition."%tk.current_time())
-
-		print("[%18s] Forming an adjacency matrix for polygons."%tk.current_time())
-		adjacency_matrix = adjacency.get_adjacency_as_matrix(decomposition)
-		print("[%18s] Adjacency matrix complete."%tk.current_time())
-
-		print("[%18s] Populating the free space with segments."%tk.current_time())
-		segments = min_alt_discrt.discritize_set(decomposition, width)
-		print("[%18s] Finished generating segments."%tk.current_time())
-
-		print("[%18s] Obtain a mapping between nodes and segments."%tk.current_time())
-		mapping = get_mapping.get_mapping(segments)
-		print("[%18s] Obtained mapping."%tk.current_time())
-
-		print("[%18s] Started computing the cost matrix."%tk.current_time())
-		cost_matrix, cluster_list = dubins_cost.compute_costs(P, mapping, width/2)
-		print("[%18s] Finished computing the cost matrix."%tk.current_time())
-
-		print("[%18s] Generating and launching GTSP instance."%tk.current_time())
-		solver.solve("cpp_test", GLKH_LOCATION, cost_matrix, cluster_list)
-		print("[%18s] Sovled GTSP instance."%tk.current_time())
-
-
-		print("[%18s] Reading the results."%tk.current_time())
-		tour = solver.read_tour("cpp_test")
-
-		print("[%18s] Plotting the results."%tk.current_time())		
-		ax = splot.init_axis()
-
-		print("[%18s] Plotting decomposition."%tk.current_time())
-		splot.plot_decomposition(ax, decomposition, adjacency_matrix, P)
-
-		print("[%18s] Plotting sampling."%tk.current_time())
-		splot.plot_samples(ax, segments)
-
-		print("[%18s] Plotting path."%tk.current_time())
-		#splot.plot_tour(ax, tour, lines, dict_mapping)
-		splot.plot_tour_dubins(ax, tour, mapping, width/2)
-
-		print("Tour Length %2f."%tour_length.length(tour, segments, cost_matrix))
-		print("Polygon Area: %2f"%tour_area.polygon_area(P))
-		print("Area covered: %2f"%tour_area.covered_area(tour, mapping, width/2))
-		splot.display()
-
-	elif method == 1:
-		print("[%18s] Invoking min_alt decomposition."%tk.current_time())
-		decomposition = min_alt_decompose.decompose(P)
-		print("[%18s] Finished min_alt decomposition."%tk.current_time())
-	#	print decomposition
-
-		print("[%18s] Forming an adjacency matrix for polygons."%tk.current_time())
-		adjacency_matrix = adjacency.get_adjacency_as_matrix(decomposition)
-		print("[%18s] Adjacency matrix complete."%tk.current_time())
-
-		print("[%18s] Populating the free space with segments."%tk.current_time())
-		segments = min_alt_discrt.discritize_set(decomposition, width)
-		print("[%18s] Finished generating segments."%tk.current_time())
-
-		print("[%18s] Obtain a mapping between nodes and segments."%tk.current_time())
-		mapping = get_mapping.get_mapping(segments)
-		print("[%18s] Obtained mapping."%tk.current_time())
-
-		print("[%18s] Started computing the cost matrix."%tk.current_time())
-		cost_matrix, cluster_list = dubins_cost.compute_costs(P, mapping, width/2)
-		print("[%18s] Finished computing the cost matrix."%tk.current_time())
-
-		print("[%18s] Generating and launching GTSP instance."%tk.current_time())
-		solver.solve("cpp_test", GLKH_LOCATION, cost_matrix, cluster_list)
-		print("[%18s] Sovled GTSP instance."%tk.current_time())
-
-
-		print("[%18s] Reading the results."%tk.current_time())
-		tour = solver.read_tour("cpp_test")
-
-		print("[%18s] Plotting the results."%tk.current_time())		
-		ax = splot.init_axis()
-
-		print("[%18s] Plotting decomposition."%tk.current_time())
-		splot.plot_decomposition(ax, decomposition, adjacency_matrix)
-
-		print("[%18s] Plotting sampling."%tk.current_time())
-		splot.plot_samples(ax, segments)
-
-		print("[%18s] Plotting path."%tk.current_time())
-		#splot.plot_tour(ax, tour, lines, dict_mapping)
-		splot.plot_tour_dubins(ax, tour, mapping, width/2)
-
-		print("Tour Length %2f."%tour_length.length(tour, segments, cost_matrix))
-
-		splot.display()
-
-	elif method == 2:
-
-		print("[%18s] Populating the free space with segments."%tk.current_time())
-		segments = point_discrt.discritize_polygon(P, width/2)
-		print("[%18s] Finished generating segments."%tk.current_time())
-
-		print("[%18s] Obtain a mapping between nodes and segments."%tk.current_time())
-		mapping = get_mapping.get_mapping(segments)
-		print("[%18s] Obtained mapping."%tk.current_time())
-
-		print("[%18s] Started computing the cost matrix."%tk.current_time())
-#		cost_matrix, cluster_list = dubins_cost.compute_costs(P, mapping, width/2)
-		print("[%18s] Finished computing the cost matrix."%tk.current_time())
-
-		print("[%18s] Generating and launching GTSP instance."%tk.current_time())
-#		solver.solve("gtsp_13_coverage", GLKH_LOCATION, cost_matrix, cluster_list)
-		print("[%18s] Sovled GTSP instance."%tk.current_time())
-
-
-		print("[%18s] Reading the results."%tk.current_time())
-		tour = solver.read_tour("gtsp_13_coverage")
-
-
-		print("[%18s] Plotting the results."%tk.current_time())		
-		ax = splot.init_axis()
-
-		print("[%18s] Plotting decomposition."%tk.current_time())
-		splot.plot_polygon_outline(ax, P)
-
-		print("[%18s] Plotting sampling."%tk.current_time())
-		splot.plot_samples(ax, segments)
-	
-		print("[%18s] Plotting path."%tk.current_time())
-		#splot.plot_tour(ax, tour, lines, dict_mapping)
-		splot.plot_tour_dubins(ax, tour, mapping, width/2)
-
-#		print("Tour Length %2f."%tour_length.length(tour, segments, cost_matrix))
-		splot.display()
-		print("Polygon Area: %2f"%tour_area.polygon_area(P))
-		print("Area covered: %2f"%tour_area.covered_area(tour, mapping, width/2))
-
-	elif method == 3:
-		print("[%18s] Invoking min_alt decomposition."%tk.current_time())
-#		decomposition = [
-#			[[(0.0,  0.0), (10.0,  0.0),(1.0, 1.0)],[]],
-#			[[(1.0,  1.0), (10.0,  0.0),(9.0, 1.0)],[]],
-#			[[(10.0, 0.0), (10.0, 10.0),(9.0, 9.0)],[]],
-#			[[(10.0, 0.0), (9.0, 9.0),(9.0, 1.0)],[]],
-#			[[(10.0, 10.0),(9.0, 9.0),(1.0, 9.0)],[]],
-#			[[(1.0, 9.0), (0.0, 10.0),(10.0, 10.0)],[]],
-#			[[(0.0,  0.0), (1.0, 1.0),(0.0, 10.0)], []],
-#			[[(0.0,  10.0), (1.0, 1.0),(1.0, 9.0)], []]
-#		]
-		decomposition = greedy_decompose.decompose(P)
-		print("[%18s] Finished min_alt decomposition."%tk.current_time())
-
-
-		print("[%18s] Forming an adjacency matrix for polygons."%tk.current_time())
-		adjacency_matrix = adjacency.get_adjacency_as_matrix(decomposition)
-		print("[%18s] Adjacency matrix complete."%tk.current_time())
-
-
-		print("[%18s] Forming an adjacency matrix for polygons."%tk.current_time())
-		decomposition = min_alt_decompose.reoptimize(P, decomposition, adjacency_matrix)
-		print("[%18s] Adjacency matrix complete."%tk.current_time())
-
-		print("[%18s] Forming an adjacency matrix for polygons."%tk.current_time())
-		adjacency_matrix = adjacency.get_adjacency_as_matrix(decomposition)
-		print("[%18s] Adjacency matrix complete."%tk.current_time())
-
-
-		print("[%18s] Populating the free space with segments."%tk.current_time())
-		segments = min_alt_discrt.discritize_set(decomposition, width)
-		print("[%18s] Finished generating segments."%tk.current_time())
-
-		print("[%18s] Obtain a mapping between nodes and segments."%tk.current_time())
-		mapping = get_mapping.get_mapping(segments)
-		print("[%18s] Obtained mapping."%tk.current_time())
-
-		print("[%18s] Started computing the cost matrix."%tk.current_time())
-		cost_matrix, cluster_list = dubins_cost.compute_costs(P, mapping, width/2)
-		print("[%18s] Finished computing the cost matrix."%tk.current_time())
-
-		print("[%18s] Generating and launching GTSP instance."%tk.current_time())
-		solver.solve("cpp_test", GLKH_LOCATION, cost_matrix, cluster_list)
-		print("[%18s] Sovled GTSP instance."%tk.current_time())
-
-
-		print("[%18s] Reading the results."%tk.current_time())
-		tour = solver.read_tour("cpp_test")
-
-
-		print("[%18s] Plotting the results."%tk.current_time())		
-		ax = splot.init_axis()
-		print("[%18s] Plotting decomposition."%tk.current_time())
-		splot.plot_decomposition(ax, decomposition, adjacency_matrix, P)
-#		splot.display()
-
-		print("[%18s] Plotting sampling."%tk.current_time())
-		splot.plot_samples(ax, segments)
-
-		print("[%18s] Plotting path."%tk.current_time())
-		#splot.plot_tour(ax, tour, lines, dict_mapping)
-		splot.plot_tour_dubins(ax, tour, mapping, width/2)
-
-		print("Tour Length %2f."%tour_length.length(tour, segments, cost_matrix))
-		splot.display()
-		print("Polygon Area: %2f"%tour_area.polygon_area(P))
-		print("Area covered: %2f"%tour_area.covered_area(tour, mapping, width/2))
-
-	elif method == 4:
-		print("[%18s] Populating the free space with segments."%tk.current_time())
-		segments = point_discrt.discritize_polygon(P, width/2)
-		print("[%18s] Finished generating segments."%tk.current_time())
-
-		print("[%18s] Obtain a mapping between nodes and segments."%tk.current_time())
-		mapping = get_mapping.get_mapping(segments)
-		print("[%18s] Obtained mapping."%tk.current_time())
-
-		print("[%18s] Reading the results."%tk.current_time())
-		tour = solver.read_tour("cpp_test")
-
-		print("[%18s] Plotting the results."%tk.current_time())		
-		ax = splot.init_axis()
-
-		print("[%18s] Plotting decomposition."%tk.current_time())
-		splot.plot_polygon_outline(ax, P)
-
-		print("[%18s] Plotting sampling."%tk.current_time())
-		splot.plot_samples(ax, segments)
-	
-		print("[%18s] Plotting path."%tk.current_time())
-		#splot.plot_tour(ax, tour, lines, dict_mapping)
-		splot.plot_tour_dubins(ax, tour, mapping, width/2)
-
-		#print("Tour Length %2f."%tour_length.length(tour, segments, cost_matrix))
-
-		splot.display()
+# pylint: disable=invalid-name
+logger = get_logger("main")
+# pylint: enable=invalid-name
+
+
+class Robot:
+    """
+    Container class with robot "dynamics".
+    """
+    def __init__(self, footprint_width, dynamics):
+        self.footprint_width = footprint_width
+        self.dynamics = dynamics
+
+
+def coverage_path_planner(polygon, robot, method):
+    """
+    Intry point for the single agent coverage path planning.
+
+    Args:
+        polygon (List): Polygon that will be decomposed.
+        robot (Robot): Class containing "dynamics" of the robot.
+        method (int): Which method to use.
+    """
+    # TODO: Out of place.
+    width = 2 * robot.footprint_width
+
+    if method == 0: # Greed convex decomposion method
+
+        logger.info("Invoking greedy decomposition.")
+        decomposition = greedy_decompose.decompose(polygon)
+        logger.info("Finished greedy decomposition.")
+
+        logger.info("Forming an adjacency matrix for polygons.")
+        adjacency_matrix = adjacency.get_adjacency_as_matrix(decomposition)
+        logger.info("Adjacency matrix complete.")
+
+        logger.info("Populating the free space with segments.")
+        segments = min_alt_discrt.discritize_set(decomposition, width)
+        logger.info("Finished generating segments.")
+
+        logger.info("Obtain a mapping between nodes and segments.")
+        mapping = get_mapping.get_mapping(segments)
+        logger.info("Obtained mapping.")
+
+        logger.info("Started computing the cost matrix.")
+        cost_matrix, cluster_list = dubins_cost.compute_costs(polygon, mapping, width/2)
+        logger.info("Finished computing the cost matrix.")
+
+        logger.info("Generating and launching GTSP instance.")
+        solver.solve("cpp_test", GLKH_LOCATION, cost_matrix, cluster_list)
+        logger.info("Sovled GTSP instance.")
+
+
+        logger.info("Reading the results.")
+        tour = solver.read_tour("cpp_test")
+
+        logger.info("Plotting the results.")
+        ax = splot.init_axis()
+
+        logger.info("Plotting decomposition.")
+        splot.plot_decomposition(ax, decomposition, adjacency_matrix, polygon)
+
+        logger.info("Plotting sampling.")
+        splot.plot_samples(ax, segments)
+
+        logger.info("Plotting path.")
+        #splot.plot_tour(ax, tour, lines, dict_mapping)
+        splot.plot_tour_dubins(ax, tour, mapping, width/2)
+
+        logger.info("Tour Length %2f.")
+        logger.info("polygonolygon Area: %2f")
+        logger.info("Area covered: %2f")
+        splot.display()
+
+#    elif method == 1:
+#        logger.info("Invoking min_alt decomposition.")
+#        decomposition = min_alt_decompose.decompose(polygon)
+#        logger.info("Finished min_alt decomposition.")
+#    #	print decomposition
+#
+#        logger.info("Forming an adjacency matrix for polygons.")
+#        adjacency_matrix = adjacency.get_adjacency_as_matrix(decomposition)
+#        logger.info("Adjacency matrix complete.")
+#
+#        logger.info("Populating the free space with segments.")
+#        segments = min_alt_discrt.discritize_set(decomposition, width)
+#        logger.info("Finished generating segments.")
+#
+#        logger.info("Obtain a mapping between nodes and segments.")
+#        mapping = get_mapping.get_mapping(segments)
+#        logger.info("Obtained mapping.")
+#
+#        logger.info("Started computing the cost matrix.")
+#        cost_matrix, cluster_list = dubins_cost.compute_costs(polygon, mapping, width/2)
+#        logger.info("Finished computing the cost matrix.")
+#
+#        logger.info("Generating and launching GTSP instance.")
+#        solver.solve("cpp_test", GLKH_LOCATION, cost_matrix, cluster_list)
+#        logger.info("Sovled GTSP instance.")
+#
+#        logger.info("Reading the results.")
+#        tour = solver.read_tour("cpp_test")
+#
+#        logger.info("Plotting the results.")
+#        ax = splot.init_axis()
+#
+#        logger.info("Plotting decomposition.")
+#        splot.plot_decomposition(ax, decomposition, adjacency_matrix)
+#
+#        logger.info("Plotting sampling.")
+#        splot.plot_samples(ax, segments)
+#
+#        logger.info("Plotting path.")
+#        #splot.plot_tour(ax, tour, lines, dict_mapping)
+#        splot.plot_tour_dubins(ax, tour, mapping, width/2)
+#
+#        logger.info("Tour Length %2f.")
+#
+#        splot.display()
+#
+#    elif method == 2:
+#
+#        logger.info("Populating the free space with segments.")
+#        segments = point_discrt.discritize_polygon(polygon, width/2)
+#        logger.info("Finished generating segments.")
+#
+#        logger.info("Obtain a mapping between nodes and segments.")
+#        mapping = get_mapping.get_mapping(segments)
+#        logger.info("Obtained mapping.")
+#
+#        logger.info("Started computing the cost matrix.")
+##		cost_matrix, cluster_list = dubins_cost.compute_costs(polygon, mapping, width/2)
+#        logger.info("Finished computing the cost matrix.")
+#
+#        logger.info("Generating and launching GTSP instance.")
+##		solver.solve("gtsp_13_coverage", GLKH_LOCATION, cost_matrix, cluster_list)
+#        logger.info("Sovled GTSP instance.")
+#
+#
+#        logger.info("Reading the results.")
+#        tour = solver.read_tour("gtsp_13_coverage")
+#
+#
+#        logger.info("Plotting the results.")
+#        ax = splot.init_axis()
+#
+#        logger.info("Plotting decomposition.")
+#        splot.plot_polygon_outline(ax, polygon)
+#
+#        logger.info("Plotting sampling.")
+#        splot.plot_samples(ax, segments)
+#
+#        logger.info("Plotting path.")
+#        #splot.plot_tour(ax, tour, lines, dict_mapping)
+#        splot.plot_tour_dubins(ax, tour, mapping, width/2)
+#
+##		logger.info("Tour Length %2f.")
+#        splot.display()
+#        logger.info("polygonolygon Area: %2f")
+#        logger.info("Area covered: %2f")
+#
+#    elif method == 3:
+#        logger.info("Invoking min_alt decomposition.")
+##		decomposition = [
+##			[[(0.0,  0.0), (10.0,  0.0),(1.0, 1.0)],[]],
+##			[[(1.0,  1.0), (10.0,  0.0),(9.0, 1.0)],[]],
+##			[[(10.0, 0.0), (10.0, 10.0),(9.0, 9.0)],[]],
+##			[[(10.0, 0.0), (9.0, 9.0),(9.0, 1.0)],[]],
+##			[[(10.0, 10.0),(9.0, 9.0),(1.0, 9.0)],[]],
+##			[[(1.0, 9.0), (0.0, 10.0),(10.0, 10.0)],[]],
+##			[[(0.0,  0.0), (1.0, 1.0),(0.0, 10.0)], []],
+##			[[(0.0,  10.0), (1.0, 1.0),(1.0, 9.0)], []]
+##		]
+#        decomposition = greedy_decompose.decompose(polygon)
+#        logger.info("Finished min_alt decomposition.")
+#
+#
+#        logger.info("Forming an adjacency matrix for polygons.")
+#        adjacency_matrix = adjacency.get_adjacency_as_matrix(decomposition)
+#        logger.info("Adjacency matrix complete.")
+#
+#
+#        logger.info("Forming an adjacency matrix for polygons.")
+#        decomposition = min_alt_decompose.reoptimize(polygon, decomposition, adjacency_matrix)
+#        logger.info("Adjacency matrix complete.")
+#
+#        logger.info("Forming an adjacency matrix for polygons.")
+#        adjacency_matrix = adjacency.get_adjacency_as_matrix(decomposition)
+#        logger.info("Adjacency matrix complete.")
+#
+#
+#        logger.info("Populating the free space with segments.")
+#        segments = min_alt_discrt.discritize_set(decomposition, width)
+#        logger.info("Finished generating segments.")
+#
+#        logger.info("Obtain a mapping between nodes and segments.")
+#        mapping = get_mapping.get_mapping(segments)
+#        logger.info("Obtained mapping.")
+#
+#        logger.info("Started computing the cost matrix.")
+#        cost_matrix, cluster_list = dubins_cost.compute_costs(P, mapping, width/2)
+#        logger.info("Finished computing the cost matrix.")
+#
+#        logger.info("Generating and launching GTSpolygon instance.")
+#        solver.solve("cpp_test", GLKH_LOCATION, cost_matrix, cluster_list)
+#        logger.info("Sovled GTSP instance.")
+#
+#
+#        logger.info("Reading the results.")
+#        tour = solver.read_tour("cpp_test")
+#
+#
+#        logger.info("Plotting the results.")
+#        ax = splot.init_axis()
+#        logger.info("Plotting decomposition.")
+#        splot.plot_decomposition(ax, decomposition, adjacency_matrix, polygon)
+##		splot.display()
+#
+#        logger.info("Plotting sampling.")
+#        splot.plot_samples(ax, segments)
+#
+#        logger.info("Plotting path.")
+#        #splot.plot_tour(ax, tour, lines, dict_mapping)
+#        splot.plot_tour_dubins(ax, tour, mapping, width/2)
+#
+#        logger.info("Tour Length %2f.")
+#        splot.display()
+#        logger.info("polygonolygon Area: %2f")
+#        logger.info("Area covered: %2f")
+#
+#    elif method == 4:
+#        logger.info("Populating the free space with segments.")
+#        segments = point_discrt.discritize_polygon(polygon, width/2)
+#        logger.info("Finished generating segments.")
+#
+#        logger.info("Obtain a mapping between nodes and segments.")
+#        mapping = get_mapping.get_mapping(segments)
+#        logger.info("Obtained mapping.")
+#
+#        logger.info("Reading the results.")
+#        tour = solver.read_tour("cpp_test")
+#
+#        logger.info("Plotting the results.")
+#        ax = splot.init_axis()
+#
+#        logger.info("Plotting decomposition.")
+#        splot.plot_polygon_outline(ax, polygon)
+#
+#        logger.info("Plotting sampling.")
+#        splot.plot_samples(ax, segments)
+#
+#        logger.info("Plotting path.")
+#        #splot.plot_tour(ax, tour, lines, dict_mapping)
+#        splot.plot_tour_dubins(ax, tour, mapping, width/2)
+#
+#        #logger.info("Tour Length %2f.")
+#
+#        splot.display()
 
 if __name__ == "__main__":
 
-	robot = Robot(0.2, "dubins")
-	coverage_path_planner(13, robot, 3)
+    # Generating a polygon
+    logger.info("Generating a polygon.")
+    polygon = polygon_library.polygon_generator(13)
+    logger.info("Polygon generated.")
+
+    robot = Robot(0.2, "dubins")
+    coverage_path_planner(polygon, robot, 3)

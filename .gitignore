@@ -2,7 +2,10 @@
 *.log
 *.tour
 *.gtsp
+*.swp
 solver_logs
 pkg/gtsp/solver_logs/
 cpp_test.gtsp
 old
+*.mypy_cache
+tags
