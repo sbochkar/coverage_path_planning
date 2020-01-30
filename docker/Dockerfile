@@ -6,6 +6,7 @@ RUN apt-get update && \
         python3-dev \
         python3-tk \
         locales \
+        curl \
     && locale-gen en_US.UTF-8 \
     && update-locale en_US.UTF-8 \
     && export LC_ALL="en_US.UTF-8" \
@@ -17,3 +18,10 @@ RUN apt-get update && \
         descartes \
         py2d-fixed \
         dubins
+RUN cd tmp \
+    && curl -O http://akira.ruc.dk/~keld/research/GLKH/GLKH-1.0.tgz \
+    && tar xvfz GLKH-1.0.tgz \
+    && cd GLKH-1.0 \
+    && make \
+    && ln -s /tmp/GLKH-1.0/GLKH /bin
+

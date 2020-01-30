@@ -8,7 +8,7 @@ from pkg.discritizers.line import min_alt_discrt
 #from pkg.discritizers.point import point_discrt
 from pkg.discritizers import get_mapping
 from pkg.costs import dubins_cost
-#from pkg.gtsp.GLKH import solver
+from pkg.gtsp.GLKH import solver
 #from pkg.visuals.static	import coverage_plot as splot
 #from pkg.analysis import tour_length
 #from pkg.analysis import tour_area
