@@ -8,7 +8,7 @@ from pkg.discritizers.line import min_alt_discrt
 #from pkg.discritizers.point import point_discrt
 from pkg.discritizers import get_mapping
 from pkg.costs import dubins_cost
-from pkg.gtsp.GLKH import solver
+from pkg.gtsp.GLKH import GTSPSolver
 from pkg.visuals.static	import coverage_plot as splot
 #from pkg.analysis import tour_length
 #from pkg.analysis import tour_area
@@ -66,11 +66,9 @@ def coverage_path_planner(polygon, robot, method):
         logger.info("Finished computing the cost matrix.")
 
         logger.info("Generating and launching GTSP instance.")
-        solver.solve("cpp_test", cost_matrix, cluster_list)
+        solver = GTSPSolver("cpp_test", cost_matrix, cluster_list)
+        tour = solver.launch_solver_and_get_tour()
         logger.info("Sovled GTSP instance.")
-
-        logger.info("Reading the results.")
-        tour = solver.read_tour("cpp_test")
 
         logger.info("Plotting the results.")
         ax = splot.init_axis()
