@@ -1,4 +1,6 @@
 """Module defining all interactions with the GTSP solver."""
+import os
+import tempfile
 from typing import List
 import subprocess
 
@@ -8,6 +10,7 @@ class GTSPSolver():
     SOLVER_CMD = "GLKH"
 
     __slots__ = (
+        'temp_dir',
         'problem_name',
         'cost_matrix',
         'clusters',
@@ -23,12 +26,13 @@ class GTSPSolver():
             cost_matrix (List): 2D List containing costs.
             clusters (List): 2D List containing cluster info.
         """
+        self.temp_dir = tempfile.TemporaryDirectory()
         self.problem_name = problem_name
         self.cost_matrix = [list(map(int, row)) for row in cost_matrix]
         self.clusters = [list(map(lambda x: x + 1, row)) for i, row in enumerate(clusters)]
         self.problem_params = {
-            'PROBLEM_FILE': problem_name + '.gtsp',
-            'OUTPUT_TOUR_FILE': problem_name + '.tour',
+            'PROBLEM_FILE': os.path.join(self.temp_dir.name, problem_name + '.gtsp'),
+            'OUTPUT_TOUR_FILE': os.path.join(self.temp_dir.name, problem_name + '.tour'),
             'ASCENT_CANDIDATES': 500,
             'INITIAL_PERIOD': 1000,
             'MAX_CANDIDATES': 30,
@@ -51,14 +55,14 @@ class GTSPSolver():
 
     def _gen_parameter_file(self):
         """Generate and write parameter file to disk."""
-        with open(self.problem_name + '.par', 'w') as file_:
+        with open(os.path.join(self.temp_dir.name, self.problem_name + '.par'), 'w') as file_:
             for key, val in self.problem_params.items():
                 file_.write("{} = {}\n".format(key, val))
 
     def _gen_problem_def_file(self):
         """Generate and write problem definition to disk."""
         # Write GTSP instance properties
-        with open(self.problem_name + ".gtsp", "w") as file_:
+        with open(os.path.join(self.temp_dir.name, self.problem_name + '.gtsp'), 'w') as file_:
             for key, val in self.problem_defs.items():
                 file_.write(key + ' = ' + str(val) + '\n')
 
@@ -83,7 +87,7 @@ class GTSPSolver():
             A list of verticies representing a tour.
         """
         # Read in the results from the TSP solver results
-        with open(self.problem_name + ".tour", 'r') as file_:
+        with open(os.path.join(self.temp_dir.name, self.problem_name + '.tour'), 'r') as file_:
             # Some kind of bookkeeping.
             for _ in range(6):
                 file_.readline()
@@ -96,7 +100,8 @@ class GTSPSolver():
         return tour
 
     def launch_solver_and_get_tour(self) -> List[int]:
-        """Launch external solver with preconfigured parameters.
+        """Launch external solver with preconfigured parameters. Resulting files are stored
+        in temporary directory which is deleted after all the information is captured.
 
         Returns:
             A list of verticies representing a tour.
@@ -104,7 +109,9 @@ class GTSPSolver():
         self._gen_parameter_file()
         self._gen_problem_def_file()
 
-        cmd = [self.SOLVER_CMD, self.problem_name + ".par"]
+        cmd = [self.SOLVER_CMD, os.path.join(self.temp_dir.name, self.problem_name + ".par")]
         subprocess.run(cmd, check=True)
+
+        del self.temp_dir
 
         return self.read_tour_file()
