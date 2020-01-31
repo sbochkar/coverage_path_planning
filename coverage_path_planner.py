@@ -9,15 +9,12 @@ from pkg.discritizers.line import min_alt_discrt
 from pkg.discritizers import get_mapping
 from pkg.costs import dubins_cost
 from pkg.gtsp.GLKH import solver
-#from pkg.visuals.static	import coverage_plot as splot
+from pkg.visuals.static	import coverage_plot as splot
 #from pkg.analysis import tour_length
 #from pkg.analysis import tour_area
 #from pkg.poly_operations.others	import operations
 
 from log_utils import get_logger
-
-
-GLKH_LOCATION = "/home/sbochkar/misc/GLKH-1.0/"
 
 
 # pylint: disable=invalid-name
@@ -69,9 +66,8 @@ def coverage_path_planner(polygon, robot, method):
         logger.info("Finished computing the cost matrix.")
 
         logger.info("Generating and launching GTSP instance.")
-        solver.solve("cpp_test", GLKH_LOCATION, cost_matrix, cluster_list)
+        solver.solve("cpp_test", cost_matrix, cluster_list)
         logger.info("Sovled GTSP instance.")
-
 
         logger.info("Reading the results.")
         tour = solver.read_tour("cpp_test")

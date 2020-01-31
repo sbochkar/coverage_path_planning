@@ -1,19 +1,19 @@
-import os
+from typing import List
 import subprocess
 
 
-def solve(problem_name, solver_loc, cost_matrix, cluster_array):
+def solve(problem_name, cost_matrix: List[List], cluster_array):
     """
-    This function will generate appropriate files for GTSP
-    solver and start the solver.
+    This function will generate appropriate files for GTSPsolver and start the solver.
 
-    :param problem_name: The name of the problem, useful for problem_names
-    :param solver_loc: path to the solver
-    :param cost_matrix: Matrix with costs
-    :param cluster_array: Information about clusters
-    :return tour: Tour
+    Args:
+        problem_name (str): The name of the problem, useful for problem_names.
+        cost_matrix (List[List]): 2D List of costs.
+        cluster_array (List[List]): 2D list of cluster information.
+
+    Returns:
+        N/A
     """
-
     # TODO: Move this preprocessing step somewhere else.
     for i, row in enumerate(cost_matrix):
         cost_matrix[i] = list(map(int, row))
@@ -39,9 +39,9 @@ def solve(problem_name, solver_loc, cost_matrix, cluster_array):
     }
 
     # Write GTSP instance settings
-    with open(problem_name + '.par', 'w') as f:
+    with open(problem_name + '.par', 'w') as file_:
         for key, val in settings_dict.items():
-            f.write("{} = {}\n".format(key, val))
+            file_.write("{} = {}\n".format(key, val))
 
     props_dict = {
         'NAME': problem_name,
@@ -54,29 +54,23 @@ def solve(problem_name, solver_loc, cost_matrix, cluster_array):
     }
 
     # Write GTSP instance properties
-    with open(problem_name + ".gtsp", "w") as f:
-        for k, v in props_dict.items():
-            f.write(k + ' = ' + str(v) + '\n')
+    with open(problem_name + ".gtsp", "w") as file_:
+        for key, val in props_dict.items():
+            file_.write(key + ' = ' + str(val) + '\n')
 
-        f.write("EDGE_WEIGHT_SECTION\n")
+        file_.write("EDGE_WEIGHT_SECTION\n")
         # Converting to str and forming a row.
-        for matrix_row in cost_matrix:
-            row = " ".join(map(str, matrix_row))
-            f.write(row + '\n')
+        for row in cost_matrix:
+            file_row = " ".join(map(str, row))
+            file_.write(file_row + '\n')
 
-        f.write("GTSP_SET_SECTION\n")
-        for i, matrix_row in enumerate(cluster_array):
-            row = " ".join(map(str, matrix_row))
-            f.write("{} {} -1\n".format(i + 1, row))
+        file_.write("GTSP_SET_SECTION\n")
+        for i, row in enumerate(cluster_array):
+            file_row = " ".join(map(str, row))
+            file_.write("{} {} -1\n".format(i + 1, file_row))
 
-        f.write("EOF\n")
-        f.write("")
-
-    # Move the files to GTSP solver location
-    # os.system("cp "+problem_name+".gtsp "+'/pkg/gtsp/solver_logs/')
-    # os.system("cp "+problem_name+".par "+'/pkg/gtsp/solver_logs/')
-    #os.system("mv "+problem_name+".gtsp "+solver_loc)
-    #os.system("mv "+problem_name+".par "+solver_loc+"TMP/")
+        file_.write("EOF\n")
+        file_.write("")
 
     cmd = ["GLKH", problem_name + ".par"]
     subprocess.run(cmd, check=True)
@@ -90,7 +84,7 @@ def solve(problem_name, solver_loc, cost_matrix, cluster_array):
 def read_tour(problem_name):
 
     # Read in the results from the TSP solver results
-    with open('pkg/gtsp/solver_logs/'+problem_name+".tour", 'r') as f:
+    with open(problem_name + ".tour", 'r') as f:
         for i in range(6):
             f.readline()
 
