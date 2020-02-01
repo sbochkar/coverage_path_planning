@@ -112,6 +112,7 @@ class GTSPSolver():
         cmd = [self.SOLVER_CMD, os.path.join(self.temp_dir.name, self.problem_name + ".par")]
         subprocess.run(cmd, check=True)
 
+        tour = self.read_tour_file()
         del self.temp_dir
 
-        return self.read_tour_file()
+        return tour

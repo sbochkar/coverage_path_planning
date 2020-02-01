@@ -79,24 +79,25 @@ def get_adjacency_as_matrix(P_list):
     #return P_list
 
     adj_matrix = [[None for i in range(len(P_list))] for i in range(len(P_list))]
+
     # Test each pair of polys and determine if they are adjacent
-    for p1_idx in range(len(P_list)):
-        for p2_idx in range(p1_idx+1, len(P_list)):
+    for p1_idx, _ in enumerate(P_list):
+        for p2_idx in range(p1_idx + 1, len(P_list)):
 
-            p1 = P_list[p1_idx]; p2 = P_list[p2_idx]
-            p1_ext = p1[0]; p2_ext = p2[0]
-            n1 = len(p1_ext); n2 = len(p2_ext)
+            # P_list is a list of polygons in a decomposition.
+            p1_ext, _ = P_list[p1_idx]
+            p2_ext, _ = P_list[p2_idx]
+            num_verts_1 = len(p1_ext)
+            num_verts_2 = len(p2_ext)
 
-            #print("p1: %s"%(p1,))
             # Test every pair of edges from both polygons to see equality
-            for i in range(n1):
-                edge1 = [p1_ext[i]]+[p1_ext[(i+1)%n1]]
-                for j in range(n2):
-                    edge2 = [p2_ext[j]]+[p2_ext[(j+1)%n2]]
+            for i in range(num_verts_1):
+                edge1 = [p1_ext[i]] + [p1_ext[(i + 1) % num_verts_1]]
+                for j in range(num_verts_2):
+                    edge2 = [p2_ext[j]] + [p2_ext[(j + 1) % num_verts_2]]
 
                     has_overlap, coords = edges.check_for_overlap(edge1, edge2)
                     if has_overlap:
                         adj_matrix[p1_idx][p2_idx] = coords
                         adj_matrix[p2_idx][p1_idx] = coords
-
     return adj_matrix

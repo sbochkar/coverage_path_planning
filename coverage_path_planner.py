@@ -1,5 +1,6 @@
-#Local modules
-from pkg.time_keeping import time_keeping as tk
+"""Single agent coverage planner."""
+import sys
+
 from pkg.poly_operations.hard_coded_lib import polygon_library
 from pkg.decompositions import adjacency
 from pkg.decompositions.greedy import greedy_decompose
@@ -26,8 +27,15 @@ class Robot:
     """
     Container class with robot "dynamics".
     """
-    def __init__(self, footprint_width, dynamics):
-        self.footprint_width = footprint_width
+    def __init__(self, footprint_radius, dynamics):
+        """Constructor.
+
+        Args:
+            footprint_radius (float): Radius of the coverage tool.
+            dynamics (Any): Not used.
+        """
+        self.footprint_radius = footprint_radius
+        self.footprint_diameter = 2 * footprint_radius
         self.dynamics = dynamics
 
 
@@ -40,53 +48,17 @@ def coverage_path_planner(polygon, robot, method):
         robot (Robot): Class containing "dynamics" of the robot.
         method (int): Which method to use.
     """
-    # TODO: Out of place.
-    width = 2 * robot.footprint_width
+    decomposition = greedy_decompose.decompose(polygon)
+    adjacency_matrix = adjacency.get_adjacency_as_matrix(decomposition)
+    segments = min_alt_discrt.discritize_set(decomposition, robot.footprint_diameter)
+    mapping = get_mapping.get_mapping(segments)
+    cost_matrix, cluster_list = dubins_cost.compute_costs(
+        polygon, mapping, robot.footprint_radius)
 
-    if method == 0: # Greed convex decomposion method
+    solver = GTSPSolver("cpp_test", cost_matrix, cluster_list)
+    tour = solver.launch_solver_and_get_tour()
 
-        logger.info("Invoking greedy decomposition.")
-        decomposition = greedy_decompose.decompose(polygon)
-        logger.info("Finished greedy decomposition.")
-
-        logger.info("Forming an adjacency matrix for polygons.")
-        adjacency_matrix = adjacency.get_adjacency_as_matrix(decomposition)
-        logger.info("Adjacency matrix complete.")
-
-        logger.info("Populating the free space with segments.")
-        segments = min_alt_discrt.discritize_set(decomposition, width)
-        logger.info("Finished generating segments.")
-
-        logger.info("Obtain a mapping between nodes and segments.")
-        mapping = get_mapping.get_mapping(segments)
-        logger.info("Obtained mapping.")
-
-        logger.info("Started computing the cost matrix.")
-        cost_matrix, cluster_list = dubins_cost.compute_costs(polygon, mapping, width/2)
-        logger.info("Finished computing the cost matrix.")
-
-        logger.info("Generating and launching GTSP instance.")
-        solver = GTSPSolver("cpp_test", cost_matrix, cluster_list)
-        tour = solver.launch_solver_and_get_tour()
-        logger.info("Sovled GTSP instance.")
-
-        logger.info("Plotting the results.")
-        ax = splot.init_axis()
-
-        logger.info("Plotting decomposition.")
-        splot.plot_decomposition(ax, decomposition, adjacency_matrix, polygon)
-
-        logger.info("Plotting sampling.")
-        splot.plot_samples(ax, segments)
-
-        logger.info("Plotting path.")
-        #splot.plot_tour(ax, tour, lines, dict_mapping)
-        splot.plot_tour_dubins(ax, tour, mapping, width/2)
-
-        logger.info("Tour Length %2f.")
-        logger.info("polygonolygon Area: %2f")
-        logger.info("Area covered: %2f")
-        splot.display()
+    return decomposition, adjacency_matrix, segments, tour, mapping
 
 #    elif method == 1:
 #        logger.info("Invoking min_alt decomposition.")
@@ -107,7 +79,7 @@ def coverage_path_planner(polygon, robot, method):
 #        logger.info("Obtained mapping.")
 #
 #        logger.info("Started computing the cost matrix.")
-#        cost_matrix, cluster_list = dubins_cost.compute_costs(polygon, mapping, width/2)
+#        cost_matrix, cluster_list = dubins_cost.compute_costs(polygon, mapping, robot.footprint_diameter/2)
 #        logger.info("Finished computing the cost matrix.")
 #
 #        logger.info("Generating and launching GTSP instance.")
@@ -128,7 +100,7 @@ def coverage_path_planner(polygon, robot, method):
 #
 #        logger.info("Plotting path.")
 #        #splot.plot_tour(ax, tour, lines, dict_mapping)
-#        splot.plot_tour_dubins(ax, tour, mapping, width/2)
+#        splot.plot_tour_dubins(ax, tour, mapping, robot.footprint_radius)
 #
 #        logger.info("Tour Length %2f.")
 #
@@ -137,7 +109,7 @@ def coverage_path_planner(polygon, robot, method):
 #    elif method == 2:
 #
 #        logger.info("Populating the free space with segments.")
-#        segments = point_discrt.discritize_polygon(polygon, width/2)
+#        segments = point_discrt.discritize_polygon(polygon, robot.footprint_radius)
 #        logger.info("Finished generating segments.")
 #
 #        logger.info("Obtain a mapping between nodes and segments.")
@@ -145,7 +117,7 @@ def coverage_path_planner(polygon, robot, method):
 #        logger.info("Obtained mapping.")
 #
 #        logger.info("Started computing the cost matrix.")
-##		cost_matrix, cluster_list = dubins_cost.compute_costs(polygon, mapping, width/2)
+##		cost_matrix, cluster_list = dubins_cost.compute_costs(polygon, mapping, robot.footprint_radius)
 #        logger.info("Finished computing the cost matrix.")
 #
 #        logger.info("Generating and launching GTSP instance.")
@@ -168,7 +140,7 @@ def coverage_path_planner(polygon, robot, method):
 #
 #        logger.info("Plotting path.")
 #        #splot.plot_tour(ax, tour, lines, dict_mapping)
-#        splot.plot_tour_dubins(ax, tour, mapping, width/2)
+#        splot.plot_tour_dubins(ax, tour, mapping, robot.footprint_radius)
 #
 ##		logger.info("Tour Length %2f.")
 #        splot.display()
@@ -206,7 +178,7 @@ def coverage_path_planner(polygon, robot, method):
 #
 #
 #        logger.info("Populating the free space with segments.")
-#        segments = min_alt_discrt.discritize_set(decomposition, width)
+#        segments = min_alt_discrt.discritize_set(decomposition, robot.footprint_diameter)
 #        logger.info("Finished generating segments.")
 #
 #        logger.info("Obtain a mapping between nodes and segments.")
@@ -214,7 +186,7 @@ def coverage_path_planner(polygon, robot, method):
 #        logger.info("Obtained mapping.")
 #
 #        logger.info("Started computing the cost matrix.")
-#        cost_matrix, cluster_list = dubins_cost.compute_costs(P, mapping, width/2)
+#        cost_matrix, cluster_list = dubins_cost.compute_costs(P, mapping, robot.footprint_radius)
 #        logger.info("Finished computing the cost matrix.")
 #
 #        logger.info("Generating and launching GTSpolygon instance.")
@@ -237,7 +209,7 @@ def coverage_path_planner(polygon, robot, method):
 #
 #        logger.info("Plotting path.")
 #        #splot.plot_tour(ax, tour, lines, dict_mapping)
-#        splot.plot_tour_dubins(ax, tour, mapping, width/2)
+#        splot.plot_tour_dubins(ax, tour, mapping, robot.footprint_radius)
 #
 #        logger.info("Tour Length %2f.")
 #        splot.display()
@@ -246,7 +218,7 @@ def coverage_path_planner(polygon, robot, method):
 #
 #    elif method == 4:
 #        logger.info("Populating the free space with segments.")
-#        segments = point_discrt.discritize_polygon(polygon, width/2)
+#        segments = point_discrt.discritize_polygon(polygon, robot.footprint_radius)
 #        logger.info("Finished generating segments.")
 #
 #        logger.info("Obtain a mapping between nodes and segments.")
@@ -267,7 +239,7 @@ def coverage_path_planner(polygon, robot, method):
 #
 #        logger.info("Plotting path.")
 #        #splot.plot_tour(ax, tour, lines, dict_mapping)
-#        splot.plot_tour_dubins(ax, tour, mapping, width/2)
+#        splot.plot_tour_dubins(ax, tour, mapping, robot.footprint_radius)
 #
 #        #logger.info("Tour Length %2f.")
 #
@@ -277,8 +249,16 @@ if __name__ == "__main__":
 
     # Generating a polygon
     logger.info("Generating a polygon.")
-    polygon = polygon_library.polygon_generator(1)
+    polygon = polygon_library.polygon_generator(int(sys.argv[1]))
     logger.info("Polygon generated.")
 
     robot = Robot(0.2, "dubins")
-    coverage_path_planner(polygon, robot, 0)
+    
+    decomposition, adjacency_matrix, segments, tour, mapping = coverage_path_planner(polygon, robot, 0)
+
+    ax = splot.init_axis()
+    splot.plot_decomposition(ax, decomposition, adjacency_matrix, polygon)
+    splot.plot_samples(ax, segments)
+    splot.plot_tour_dubins(ax, tour, mapping, robot.footprint_radius)
+    splot.display()
+
