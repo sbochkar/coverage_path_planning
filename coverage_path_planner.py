@@ -4,7 +4,7 @@ import sys
 from pkg.poly_operations.hard_coded_lib import polygon_library
 from pkg.decompositions import adjacency
 from pkg.decompositions.greedy import greedy_decompose
-#from pkg.decompositions.min_alt import min_alt_decompose
+from decomposers import min_alt_decompose
 from pkg.discritizers.line import min_alt_discrt
 #from pkg.discritizers.point import point_discrt
 from pkg.discritizers import get_mapping
@@ -48,64 +48,63 @@ def coverage_path_planner(polygon, robot, method):
         robot (Robot): Class containing "dynamics" of the robot.
         method (int): Which method to use.
     """
-    decomposition = greedy_decompose.decompose(polygon)
-    adjacency_matrix = adjacency.get_adjacency_as_matrix(decomposition)
-    segments = min_alt_discrt.discritize_set(decomposition, robot.footprint_diameter)
-    mapping = get_mapping.get_mapping(segments)
-    cost_matrix, cluster_list = dubins_cost.compute_costs(
-        polygon, mapping, robot.footprint_radius)
+    # Greedy convex decomposition and nothign else.
 
-    solver = GTSPSolver("cpp_test", cost_matrix, cluster_list)
-    tour = solver.launch_solver_and_get_tour()
+    #decomposition = greedy_decompose.decompose(polygon)
+    #adjacency_matrix = adjacency.get_adjacency_as_matrix(decomposition)
 
-    return decomposition, adjacency_matrix, segments, tour, mapping
+    #segments = min_alt_discrt.discritize_set(decomposition, robot.footprint_diameter)
+    #mapping = get_mapping.get_mapping(segments)
+    #cost_matrix, cluster_list = dubins_cost.compute_costs(
+    #    polygon, mapping, robot.footprint_radius)
 
-#    elif method == 1:
-#        logger.info("Invoking min_alt decomposition.")
-#        decomposition = min_alt_decompose.decompose(polygon)
-#        logger.info("Finished min_alt decomposition.")
-#    #	print decomposition
-#
-#        logger.info("Forming an adjacency matrix for polygons.")
-#        adjacency_matrix = adjacency.get_adjacency_as_matrix(decomposition)
-#        logger.info("Adjacency matrix complete.")
-#
-#        logger.info("Populating the free space with segments.")
-#        segments = min_alt_discrt.discritize_set(decomposition, width)
-#        logger.info("Finished generating segments.")
-#
-#        logger.info("Obtain a mapping between nodes and segments.")
-#        mapping = get_mapping.get_mapping(segments)
-#        logger.info("Obtained mapping.")
-#
-#        logger.info("Started computing the cost matrix.")
-#        cost_matrix, cluster_list = dubins_cost.compute_costs(polygon, mapping, robot.footprint_diameter/2)
-#        logger.info("Finished computing the cost matrix.")
-#
-#        logger.info("Generating and launching GTSP instance.")
-#        solver.solve("cpp_test", GLKH_LOCATION, cost_matrix, cluster_list)
-#        logger.info("Sovled GTSP instance.")
-#
-#        logger.info("Reading the results.")
-#        tour = solver.read_tour("cpp_test")
-#
-#        logger.info("Plotting the results.")
-#        ax = splot.init_axis()
-#
-#        logger.info("Plotting decomposition.")
-#        splot.plot_decomposition(ax, decomposition, adjacency_matrix)
-#
-#        logger.info("Plotting sampling.")
-#        splot.plot_samples(ax, segments)
-#
-#        logger.info("Plotting path.")
-#        #splot.plot_tour(ax, tour, lines, dict_mapping)
-#        splot.plot_tour_dubins(ax, tour, mapping, robot.footprint_radius)
-#
-#        logger.info("Tour Length %2f.")
-#
-#        splot.display()
-#
+    #solver = GTSPSolver("cpp_test", cost_matrix, cluster_list)
+    #tour = solver.launch_solver_and_get_tour()
+
+    #return decomposition, adjacency_matrix, segments, tour, mapping
+
+    decomposition = min_alt_decompose.decompose(polygon)
+
+    #logger.info("Forming an adjacency matrix for polygons.")
+    #adjacency_matrix = adjacency.get_adjacency_as_matrix(decomposition)
+    #logger.info("Adjacency matrix complete.")
+
+    #logger.info("Populating the free space with segments.")
+    #segments = min_alt_discrt.discritize_set(decomposition, width)
+    #logger.info("Finished generating segments.")
+
+    #logger.info("Obtain a mapping between nodes and segments.")
+    #mapping = get_mapping.get_mapping(segments)
+    #logger.info("Obtained mapping.")
+
+    #logger.info("Started computing the cost matrix.")
+    #cost_matrix, cluster_list = dubins_cost.compute_costs(polygon, mapping, robot.footprint_diameter/2)
+    #logger.info("Finished computing the cost matrix.")
+
+    #logger.info("Generating and launching GTSP instance.")
+    #solver.solve("cpp_test", GLKH_LOCATION, cost_matrix, cluster_list)
+    #logger.info("Sovled GTSP instance.")
+
+    #logger.info("Reading the results.")
+    #tour = solver.read_tour("cpp_test")
+
+    #logger.info("Plotting the results.")
+    #ax = splot.init_axis()
+
+    #logger.info("Plotting decomposition.")
+    #splot.plot_decomposition(ax, decomposition, adjacency_matrix)
+
+    #logger.info("Plotting sampling.")
+    #splot.plot_samples(ax, segments)
+
+    #logger.info("Plotting path.")
+    ##splot.plot_tour(ax, tour, lines, dict_mapping)
+    #splot.plot_tour_dubins(ax, tour, mapping, robot.footprint_radius)
+
+    #logger.info("Tour Length %2f.")
+
+    #splot.display()
+
 #    elif method == 2:
 #
 #        logger.info("Populating the free space with segments.")

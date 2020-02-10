@@ -1,8 +1,17 @@
-from shapely.geometry import LineString
-from shapely.geometry import LinearRing
-from math import sqrt
 import operator
 import itertools
+from math import sqrt
+from typing import List, Any
+from shapely.geometry import LineString
+from shapely.geometry import LinearRing
+
+from ...aux.altitudes import altitude as alt
+from ...decompositions.min_alt import cuts
+from ...poly_operations.others import chain_combination
+from ...poly_operations.others import reflex
+from ...poly_operations.others import operations
+from pkg.decompositions import adjacency
+from pkg.decompositions import edges
 
 
 def get_first_shared_edge(v, adj):
@@ -195,31 +204,25 @@ def reoptimize(P, decomposition, adj):
 
 
 
-def decompose(P):
-	"""
-	Min altitude decomposition.
+def decompose(polygon: List[List[Any]]) -> Any:
+    """High level call to minimum altitude decomposition.
 
-	1: Connect all simple chains of a polygon
-	2: Perform a series of decomposing cuts
-	3: Run an iterative minimization step to reoptimize cuts
+    Steps:
+        1. Connect all simple chains of a polygon
+        2. Perform a series of decomposing cuts
+        3 .Run an iterative minimization step to reoptimize cuts
 
-	:param P: Polygin in the standard form
-	:return decomposition: A set of polygons
-	"""
+    Args:
+        polygon (List[List[Any]]): Polygon in the standard form.
+    Returns:
+        decomposition: A set of polygons
+    """
+    _, theta = alt.get_min_altitude(polygon)
+    polygon_fused, _ = chain_combination.combine_chains(polygon, theta)
 
-	min_alt, theta = alt.get_min_altitude(P)
-	P_fused, modified_edges = chain_combination.combine_chains(P, theta)
+    recursive_cuts(polygon_fused)
 
-	#D = recursive_cuts(P_fused)
-	recursive_cuts(P_fused)
-
-	# Need a smarter way of doing this
-	#if len(D) == 2:
-	#	if not D[1]:
-	#		D = [D]
-
-
-	return list_of_polygons
+    return list_of_polygons
 
 
 list_of_polygons = []
@@ -241,21 +244,4 @@ def recursive_cuts(P):
 			recursive_cuts([p_l,[]])
 			recursive_cuts([p_r,[]])
 			return
-	#return P
 	list_of_polygons.append(P)
-
-
-if __name__ == '__main__':
-	if __package__ is None:
-		import os, sys
-		sys.path.insert(0, os.path.abspath("../.."))
-		from aux.geometry import rotation
-		import reflex
-else:
-	from ...aux.altitudes import altitude as alt
-	from ...decompositions.min_alt import cuts
-	from ...poly_operations.others import chain_combination
-	from ...poly_operations.others import reflex
-	from ...poly_operations.others import operations
-	from ...poly_operations.others import adjacency
-	from ...aux.geometry import edges

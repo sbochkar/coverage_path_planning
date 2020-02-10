@@ -7,6 +7,8 @@ RUN apt-get update && \
         python3-tk \
         locales \
         curl \
+        git \
+        swig \
     && locale-gen en_US.UTF-8 \
     && update-locale en_US.UTF-8 \
     && export LC_ALL="en_US.UTF-8" \
@@ -25,9 +27,12 @@ RUN cd /tmp \
     && tar xvfz GLKH-1.0.tgz \
     && cd GLKH-1.0 \
     && make \
-    && ln -s /tmp/GLKH-1.0/GLKH /bin
+    && ln -s /tmp/GLKH-1.0/GLKH /bin \
+    && git clone https://github.com/tsaoyu/PyVisiLibity.git \
+    && pip3 install -e PyVisiLibity
 
 WORKDIR /workspace
 RUN ln -s /tmp/GLKH-1.0/LKH /workspace \
     && mkdir TMP
+
 

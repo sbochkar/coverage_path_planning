@@ -93,7 +93,7 @@ def find_cut_edge(p1, p2, v):
 	elif p1_edge_2 == p2_edge_1: return p1_edge_2
 	elif p1_edge_2 == p2_edge_2: return p1_edge_2
 
-	print "SOMETHING WENT WORNG AND SHARED EDGE WAS NOT FOUND"
+	print("SOMETHING WENT WORNG AND SHARED EDGE WAS NOT FOUND")
 
 
 def find_common_polys(D, v):
@@ -104,6 +104,6 @@ def find_common_polys(D, v):
 			found_polys.append(poly)
 
 	if len(found_polys) > 2:
-		"SOMETHING WRONG, MORE THAN ONE COMMON POLYS"
+		print("SOMETHING WRONG, MORE THAN ONE COMMON POLYS")
 
 	return found_polys[0], found_polys[1]

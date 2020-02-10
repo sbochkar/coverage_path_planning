@@ -3,10 +3,15 @@ from shapely.geometry import Point
 from shapely.geometry import LinearRing
 from shapely.geometry import LineString
 from shapely.geometry.polygon import orient
+from ...aux.altitudes import altitude as alt
+from ...aux.geometry import rotation
+from ...poly_operations.others import chain_combination
+from ...poly_operations.others import reflex
+from ...poly_operations.others import directions
+from ...poly_operations.others import adjacency_edges as adj_e
 
-
-import cone_of_bisection
-import visib_polyg
+from .cone_of_bisection import get_cone_of_bisection
+from .visib_polyg import compute
 
 from math import sqrt
 
@@ -75,224 +80,198 @@ def form_collinear_dictionary(s, v):
 	return collinear_dict
 
 
-def find_optimal_cut(P, v):
-	"""
-	Find optimal cut
-	"""
+def find_optimal_cut(polygon, vertex):
+    """Given a polygon and a reflex vertex, finds and returns an optimal decomposing cut.
 
-	pois = []
+    Args:
+        polygon (List[List[Any]]): Polygon in cannonical form.
+        vertex (Tuple[float]): Vertex from which to search an optimal cut.
+    """
+    pois = []
 
-	min_altitude, theta = alt.get_min_altitude(P)
+    min_altitude, _ = alt.get_min_altitude(polygon)
+    search_space = find_cut_space(polygon, vertex)
+    min_altitude_idx = None
 
-	s = find_cut_space(P, v)
-	min_altitude_idx = None
-
-	# First, find edges on cut space that are collinear with reflex vertex
-	collinear_dict = form_collinear_dictionary(s, v)
-#	for i in range(1, len(s)):
-#		si = [s[i-1], s[i]]
-	for si in s:
-		# Process each edge si, have to be cw
-		lr_si = LinearRing([v[1]]+si)
-		if lr_si.is_ccw:
-			si = [si[1]]+[si[0]]
-
-
-		cut_point = si[0]
-		p_l, p_r = perform_cut(P, [v[1], cut_point])
-
-		dirs_left = directions.get_directions_set([p_l, []])
-		dirs_right = directions.get_directions_set([p_r, []])
-
-		# Look for all transition points
-		for dir1 in dirs_left:
-			for dir2 in dirs_right:
-				tp = find_best_transition_point(si, v[1], dir1, dir2)
-				# Here check if tp is collinear with v
-				# If so and invisible, replace with visible collinear point
-				if tp in collinear_dict.keys():
-					pois.append((collinear_dict[tp], dir1, dir2))
-				else:
-					pois.append((tp, dir1, dir2))
-
-	# Evaluate all transition points
-	for case in pois:
-		p_l, p_r = perform_cut(P, [v[1], case[0]])
-		a_l = alt.get_altitude([p_l, []], case[1])
-		a_r = alt.get_altitude([p_r, []], case[2])
-
-		#from math import degrees
-
-		if round(a_l+a_r, 5) < round(min_altitude, 5):
-			min_altitude = a_l+a_r
-			min_altitude_idx = case
-		
-
-	return min_altitude_idx
+    # First, find edges on cut space that are collinear with reflex vertex
+    collinear_dict = form_collinear_dictionary(search_space, vertex)
+    for si in search_space:
+        # Process each edge si, have to be cw
+        lr_si = LinearRing([vertex[1]] + si)
+        if lr_si.is_ccw:
+            si = [si[1]] + [si[0]]
 
 
-def find_cut_space(P, v):
-	"""
-	Generate the cut space at v using Visilibity library.
-	"""
+        cut_point = si[0]
+        p_l, p_r = perform_cut(polygon, [vertex[1], cut_point])
+
+        dirs_left = directions.get_directions_set([p_l, []])
+        dirs_right = directions.get_directions_set([p_r, []])
+
+        # Look for all transition points
+        for dir1 in dirs_left:
+            for dir2 in dirs_right:
+                tp = find_best_transition_point(si, vertex[1], dir1, dir2)
+                # Here check if tp is collinear with vertex
+                # If so and invisible, replace with visible collinear point
+                if tp in collinear_dict.keys():
+                    pois.append((collinear_dict[tp], dir1, dir2))
+                else:
+                    pois.append((tp, dir1, dir2))
+
+    # Evaluate all transition points
+    for case in pois:
+        p_l, p_r = perform_cut(polygon, [vertex[1], case[0]])
+        a_l = alt.get_altitude([p_l, []], case[1])
+        a_r = alt.get_altitude([p_r, []], case[2])
+
+        #from math import degrees
+
+        if round(a_l+a_r, 5) < round(min_altitude, 5):
+                min_altitude = a_l+a_r
+                min_altitude_idx = case
+            
+
+    return min_altitude_idx
 
 
-	c_of_b = cone_of_bisection.compute(P, v)
-	c_of_b = Polygon(c_of_b)
+def find_cut_space(polygon, vertex):
+    """
+    Generate the cut space at vertex using Visilibity library.
+    """
+    c_of_b = get_cone_of_bisection(polygon, vertex)
+    c_of_b = Polygon(c_of_b)
 
-	P = Polygon(*P)
+    polygon = Polygon(*polygon)
 
-	# Debug visualization
-	# Plot the polygon itself
-#	import pylab as p
-#	x, y = P.exterior.xy
-#	p.plot(x, y)
-#	x, y = c_of_b.exterior.xy
-#	p.plot(x, y)
-#	p.show()
+    intersection = c_of_b.intersection(polygon)
 
-
-	intersection = c_of_b.intersection(P)
-
-	intersection = get_closest_intersecting_polygon(intersection, v)
+    intersection = get_closest_intersecting_polygon(intersection, vertex)
 
 
-	P_vis = []; vis_holes = []
-	P_vis.append(intersection.exterior.coords[:])
-	for hole in intersection.interiors:
-		vis_holes.append(hole.coords[:])
-	P_vis.append(vis_holes)
+    P_vis = []; vis_holes = []
+    P_vis.append(intersection.exterior.coords[:])
+    for hole in intersection.interiors:
+            vis_holes.append(hole.coords[:])
+    P_vis.append(vis_holes)
 
-	point_x, point_y = visib_polyg.compute(v, P_vis)
-#	point_x, point_y = visib_polyg.compute(v, [P.exterior.coords[:],[]])
-	visible_polygon = Polygon(zip(point_x, point_y))
+    point_x, point_y = visib_polyg.compute(vertex, P_vis)
+    visible_polygon = Polygon(zip(point_x, point_y))
+    # Debug visualization
+    # Plot the polygon itself
 
+    # At this point, we have visibility polygon.
+    # Now we need to find edges of visbility polygon which are on the boundary
 
-	# Debug visualization
-	# Plot the polygon itself
-#	import pylab as p
-#	x, y = P.exterior.xy
-#	p.plot(x, y)
-	#x, y = c_of_b.exterior.xy
-	#p.plot(x, y)
-	#x, y = intersection.exterior.xy
-	#p.plot(x, y)
-#	p.plot(point_x, point_y)
-#	p.show()
+    #visible_polygon = shapely.geometry.polygon.orient(Polygon(zip(point_x, point_y)),-1)
+    visible_polygon_ls = LineString(visible_polygon.exterior.coords[:])
+    visible_polygon_ls_buffer = visible_polygon_ls.buffer(BUFFER_RADIUS)
 
+    ext_ls = LineString(polygon.exterior)
+    holes_ls = []
+    for interior in polygon.interiors:
+        holes_ls.append(LineString(interior))
 
-	# At this point, we have visibility polygon.
-	# Now we need to find edges of visbility polygon which are on the boundary
+    # Start adding cut space on the exterior
+    cut_space = []
+    common_items = []
 
-	#visible_polygon = shapely.geometry.polygon.orient(Polygon(zip(point_x, point_y)),-1)
-	visible_polygon_ls = LineString(visible_polygon.exterior.coords[:])
-	visible_polygon_ls_buffer = visible_polygon_ls.buffer(BUFFER_RADIUS)
+    #common_items = ext_ls.intersection(visible_polygon_ls)
+    common_items = ext_ls.intersection(visible_polygon_ls_buffer) # Buffer gives better results
 
-	ext_ls = LineString(P.exterior)
-	holes_ls = []
-	for interior in P.interiors:
-	 	holes_ls.append(LineString(interior))
+    # Filter out very small segments
+    # Add environment first
+    if common_items.geom_type == "MultiLineString":
+        for element in common_items:
+            line = element.coords[:]
+            # Examine each edge of the linestring
+            for i in range(len(line)-1):
+                edge = line[i:i+2]
+                edge_ls = LineString(edge)
 
-	# Start adding cut space on the exterior
-	cut_space = []
-	common_items = []
+                if edge_ls.length > LINE_LENGTH_THRESHOLD:
+                    cut_space.append(edge)
+    elif common_items.geom_type == "LineString":
+        # Examine each edge of the linestring
+        line = common_items.coords[:]
+        for i in range(len(line)-1):
+            edge = line[i:i+2]
+            edge_ls = LineString(edge)
 
-	#common_items = ext_ls.intersection(visible_polygon_ls)
-	common_items = ext_ls.intersection(visible_polygon_ls_buffer) # Buffer gives better results
+            if edge_ls.length > LINE_LENGTH_THRESHOLD:
+                cut_space.append(edge)
+    elif common_items.geom_type == "GeometryCollection":
+        for item in common_items:
+            if item.geom_type == "MultiLineString":
+                for element in item:
+                    line = element.coords[:]
+                    # Examine each edge of the linestring
+                    for i in range(len(line)-1):
+                        edge = line[i:i+2]
+                        edge_ls = LineString(edge)
 
-	# Filter out very small segments
-	# Add environment first
-	if common_items.geom_type == "MultiLineString":
-		for element in common_items:
-			line = element.coords[:]
-			# Examine each edge of the linestring
-			for i in range(len(line)-1):
-				edge = line[i:i+2]
-				edge_ls = LineString(edge)
+                        if edge_ls.length > LINE_LENGTH_THRESHOLD:
+                            cut_space.append(edge)
 
-				if edge_ls.length > LINE_LENGTH_THRESHOLD:
-					cut_space.append(edge)
-	elif common_items.geom_type == "LineString":
-		# Examine each edge of the linestring
-		line = common_items.coords[:]
-		for i in range(len(line)-1):
-			edge = line[i:i+2]
-			edge_ls = LineString(edge)
+            elif item.geom_type == "LineString":
+                # Examine each edge of the linestring
+                line = item.coords[:]
+                for i in range(len(line)-1):
+                    edge = line[i:i+2]
+                    edge_ls = LineString(edge)
 
-			if edge_ls.length > LINE_LENGTH_THRESHOLD:
-				cut_space.append(edge)
-	elif common_items.geom_type == "GeometryCollection":
-		for item in common_items:
-			if item.geom_type == "MultiLineString":
-				for element in item:
-					line = element.coords[:]
-					# Examine each edge of the linestring
-					for i in range(len(line)-1):
-						edge = line[i:i+2]
-						edge_ls = LineString(edge)
-
-						if edge_ls.length > LINE_LENGTH_THRESHOLD:
-							cut_space.append(edge)
-
-			elif item.geom_type == "LineString":
-				# Examine each edge of the linestring
-				line = item.coords[:]
-				for i in range(len(line)-1):
-					edge = line[i:i+2]
-					edge_ls = LineString(edge)
-
-					if edge_ls.length > LINE_LENGTH_THRESHOLD:
-						cut_space.append(edge)
+                    if edge_ls.length > LINE_LENGTH_THRESHOLD:
+                        cut_space.append(edge)
 
 
-	## Now start adding the hole boundaries
-	for interior in P.interiors:
-		common_items = interior.intersection(visible_polygon_ls_buffer)
-		if common_items.geom_type == "LineString":
-			line = common_items.coords[:]
-			for i in range(len(line)-1):
-				edge = line[i:i+2]
-				edge_ls = LineString(edge)
+    ## Now start adding the hole boundaries
+    for interior in polygon.interiors:
+        common_items = interior.intersection(visible_polygon_ls_buffer)
+        if common_items.geom_type == "LineString":
+            line = common_items.coords[:]
+            for i in range(len(line)-1):
+                edge = line[i:i+2]
+                edge_ls = LineString(edge)
 
-				if edge_ls.length > LINE_LENGTH_THRESHOLD:
-					cut_space.append(edge)
-		elif common_items.geom_type == "MultiLineString":
-			for element in common_items:
-				line = element.coords[:]
-				# Examine each edge of the linestring
-				for i in range(len(line)-1):
-					edge = line[i:i+2]
-					edge_ls = LineString(edge)
+                if edge_ls.length > LINE_LENGTH_THRESHOLD:
+                    cut_space.append(edge)
+        elif common_items.geom_type == "MultiLineString":
+            for element in common_items:
+                line = element.coords[:]
+                # Examine each edge of the linestring
+                for i in range(len(line)-1):
+                    edge = line[i:i+2]
+                    edge_ls = LineString(edge)
 
-					if edge_ls.length > LINE_LENGTH_THRESHOLD:
-						cut_space.append(edge)
-		elif common_items.geom_type == "GeometryCollection":
-			for item in common_items:
+                    if edge_ls.length > LINE_LENGTH_THRESHOLD:
+                        cut_space.append(edge)
+        elif common_items.geom_type == "GeometryCollection":
+            for item in common_items:
 
-				if item.geom_type == "LineString":
-					line = item.coords[:]
-					for i in range(len(line)-1):
-						edge = line[i:i+2]
-						edge_ls = LineString(edge)
+                if item.geom_type == "LineString":
+                    line = item.coords[:]
+                    for i in range(len(line)-1):
+                        edge = line[i:i+2]
+                        edge_ls = LineString(edge)
 
-						if edge_ls.length > LINE_LENGTH_THRESHOLD:
-							cut_space.append(edge)
-				elif item.geom_type == "MultiLineString":
-					for element in item:
-						line = element.coords[:]
-						# Examine each edge of the linestring
-						for i in range(len(line)-1):
-							edge = line[i:i+2]
-							edge_ls = LineString(edge)
+                        if edge_ls.length > LINE_LENGTH_THRESHOLD:
+                            cut_space.append(edge)
+                elif item.geom_type == "MultiLineString":
+                    for element in item:
+                        line = element.coords[:]
+                        # Examine each edge of the linestring
+                        for i in range(len(line)-1):
+                            edge = line[i:i+2]
+                            edge_ls = LineString(edge)
 
-							if edge_ls.length > LINE_LENGTH_THRESHOLD:
-								cut_space.append(edge)
+                            if edge_ls.length > LINE_LENGTH_THRESHOLD:
+                                cut_space.append(edge)
 
 
-	# cut_space could be lines our of order in no particular direciton
-	# We want the cut space to be cw oriented
+    # cut_space could be lines our of order in no particular direciton
+    # We want the cut space to be cw oriented
 
-	# First form a list of points
+    # First form a list of points
 #	temp_points_list = []
 #	for line in cut_space:
 #		temp_points_list.append(line[0]); temp_points_list.append(line[1]) 
@@ -328,7 +307,7 @@ def find_cut_space(P, v):
 #	p.show()
 
 #	return cut_space_ring
-	return cut_space
+    return cut_space
 
 
 def get_closest_intersecting_polygon(intersection, v):
@@ -554,22 +533,7 @@ def cut(line, distance):
 
 
 def iterative_project(line, distance):
-	"""
-	To account for self crossing edges
-	"""
-
-
-
-if __name__ == '__main__':
-	if __package__ is None:
-		import os, sys
-		sys.path.insert(0, os.path.abspath("../.."))
-		from aux.geometry import rotation
-		import reflex
-else:
-	from ...aux.altitudes import altitude as alt
-	from ...aux.geometry import rotation
-	from ...poly_operations.others import chain_combination
-	from ...poly_operations.others import reflex
-	from ...poly_operations.others import directions
-	from ...poly_operations.others import adjacency_edges as adj_e
+    """
+    To account for self crossing edges
+    """
+    pass
