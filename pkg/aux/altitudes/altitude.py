@@ -1,142 +1,110 @@
+"""Module for computing altitude of polygons."""
+from typing import Dict, Tuple
+import sys
+
+from shapely.geometry import Polygon
+from shapely.affinity import rotate
+
+from pkg.poly_operations.others.adjacency_edges import get_neighbor_map
+from ...poly_operations.others import directions
 
 
-def get_min_altitude(P):
-	"""
-	Function perofrm a series of call to get_altitude, to find the min altitude
-	Things to look out for:
-		min_alt init value might not be high ebough
+def get_min_altitude(polygon: Polygon):
+    """Computes minimum altitude for a given polygon.
 
-	"""
+    Function perofrm a series of call to get_altitude, to find the min altitude
+    Things to look out for:
+            min_alt init value might not be high ebough
 
-	dirs = directions.get_directions_set(P)
+    """
+    min_alt = sys.float_info.max
+    min_dir = 0
+    for theta in directions.get_directions_set(polygon):
+        test_alt = get_altitude(polygon, theta)
+        if test_alt <= min_alt:
+            min_alt = test_alt
+            min_dir = theta
 
-	min_alt = 1000000000
-	min_dir = 0
-	for theta in dirs:
-		test_alt = get_altitude(P, theta)
-		if test_alt <= min_alt:
-			min_alt = test_alt
-			min_dir = theta
-
-	return min_alt, min_dir
+    return min_alt, min_dir
 
 
-def get_altitude(P, theta):
-	"""
-	Compute theta altitude of polygon P.
+def get_altitude(polygon: Polygon, theta: float) -> float:
+    """Compute theta altitude of polygon.
 
-	Rotate the polygon to align sweep with the x-axis.
-	Sort all vertices of the polygon by x-coordinate.
-	Keep the counter of active corridors.
-	Sum up the lengths between events scaled by the counter.
+    Steps:
+        1. Rotate the polygon to align sweep with the x-axis.
+        2. Sort all vertices of the polygon by x-coordinate.
+        3. Keep the counter of active corridors.
+        4. Sum up the lengths between events scaled by the counter.
 
-	Args:
-		P: polygon specified in the form of a tuple (ext, [int]). ext is a list
-			of (x, y) tuples specifying the exterior of a polygon ccw. [int] is
-			a list of lists of (x, y) tupeles specifying holes of a polygon cw.
-		theta: angle of measurement with respect to x-axis
+    Args:
+        polygon (Polygon): Shapely object representing polygon.
+        theta (float): Angle of measurement with respect to x-axis.
 
-	Returns:
-		altitude: A scalar value of the altitude
-	"""	
+    Returns:
+        altitude (float): A scalar value of the altitude.
+    """
+    polygon = rotate(polygon, -theta)
+    neighbors_map = get_neighbor_map(polygon)
 
-	#print("Starting with theta:%f\n"%theta)
-	P = rotation.rotate_polygon(P, -theta)
-	adj = ae.get_edge_adjacency_as_dict(P)
+    sorted_by_x = sorted(neighbors_map.keys(), key=lambda point: point[0])
 
-	# Sort by x-coordinate
-	sorted_by_x = sorted(adj.keys(), key=lambda pt: pt[1][0])
-	#print("Sorted list of points: %s"%(sorted_by_x,))
+    altitude = 0.
+    active_event_counter = 0
+    prev_x = -sys.float_info.max
+    checked_verts = []
+    for i, vert in enumerate(sorted_by_x):
 
-	altitude = 0
-	active_event_counter = 0
-	prev_x = -10000000
-	checked_verts = []
-	for i in range(len(sorted_by_x)):
-			
-		v = sorted_by_x[i]
+        if vert in checked_verts:
+            continue
 
-		if v in checked_verts:
-			continue
+        v_x, _ = vert
+        (adj_x_1, _), (adj_x_2, _) = neighbors_map[vert]
 
-		x_v, y_v = v[1]
-		x_adj_1, y_adj_1 = adj[v][0][1]
-		x_adj_2, y_adj_2 = adj[v][1][1]
-		#print("Current : %s"%(v,))	
-		#print("Next adj: %s"%((x_adj_1, y_adj_1),))	
-		#print("Prev adj: %s"%((x_adj_2, y_adj_2),))	
-		#print("%d, %5f, %s"%(active_event_counter, altitude,v))
+        if i > 0:
+            deltax = v_x - prev_x
+            altitude += active_event_counter * deltax
+        prev_x = v_x
 
-		# Increment the altitude accordingly
-		if i>0:
-			deltax = x_v-prev_x
-			altitude += active_event_counter*deltax
-		prev_x = x_v
+        if (adj_x_1 > v_x) and (adj_x_2 > v_x):
+            active_event_counter += 1
+        elif (adj_x_1 < v_x) and (adj_x_2 < v_x):
+            active_event_counter -= 1
 
-		# Handle the easy clear cut cases here
-		if (x_adj_1 > x_v) and (x_adj_2 > x_v):
-			active_event_counter += 1
-		elif (x_adj_1 < x_v) and (x_adj_2 < x_v):
-			active_event_counter -= 1
+        if (adj_x_1 > v_x) and (adj_x_2 == v_x):
+            if resolve_local_equality(neighbors_map, neighbors_map[vert][1], vert) == 1:
+                active_event_counter += 1
+                checked_verts.append(neighbors_map[vert][1])
+        if (adj_x_2 > v_x) and (adj_x_1 == v_x):
+            if resolve_local_equality(neighbors_map, neighbors_map[vert][0], vert) == 1:
+                active_event_counter += 1
+                checked_verts.append(neighbors_map[vert][0])
+        if (adj_x_1 < v_x) and (adj_x_2 == v_x):
+            if resolve_local_equality(neighbors_map, neighbors_map[vert][1], vert) == -1:
+                active_event_counter -= 1
+                checked_verts.append(neighbors_map[vert][1])
+        if (adj_x_2 < v_x) and (adj_x_1 == v_x):
+            if resolve_local_equality(neighbors_map, neighbors_map[vert][0], vert) == -1:
+                active_event_counter -= 1
+                checked_verts.append(neighbors_map[vert][0])
 
-		# Handle the cases when some edges are parallel to sweep line
-		if (x_adj_1 > x_v) and (x_adj_2 == x_v):
-			if resolve_local_equality(adj, adj[v][1], v) == 1:
-				active_event_counter += 1
-				checked_verts.append(adj[v][1])
-		if (x_adj_2 > x_v) and (x_adj_1 == x_v):
-			if resolve_local_equality(adj, adj[v][0], v) == 1:
-				active_event_counter += 1
-				checked_verts.append(adj[v][0])
-		if (x_adj_1 < x_v) and (x_adj_2 == x_v):
-			if resolve_local_equality(adj, adj[v][1], v) == -1:
-				active_event_counter -= 1
-				checked_verts.append(adj[v][1])
-		if (x_adj_2 < x_v) and (x_adj_1 == x_v):
-			if resolve_local_equality(adj, adj[v][0], v) == -1:
-				active_event_counter -= 1
-				checked_verts.append(adj[v][0])
-
-#		print("Test point: (%f, %f)"%(current_x, current_y))
-#		print("Adj1 point: (%f, %f)"%(adjacent_x_1, adjacent_y_1))
-#		print("Adj2 point: (%f, %f)"%(adjacent_x_2, adjacent_y_2))
-#		print("Counter: %d"%active_event_counter)
-#		print("Altitude: %f"%altitude)
-	return altitude
+    return altitude
 
 
-def resolve_local_equality(adj_list, v, prev):
-	"""
-	Recursivley resolve which side the edges lie on
-	"""
+def resolve_local_equality(neighbors_map: Dict[Tuple[float, float], Tuple[Tuple[float, float]]],
+                           vert: Tuple[float, float], prev):
+    """
+    Recursivley resolve which side the edges lie on
+    """
+    adj = [neighbors_map[vert][0], neighbors_map[vert][1]]
+    if prev in adj:
+        adj.remove(prev)
 
-	adj = [adj_list[v][0], adj_list[v][1]]
-	
-	if prev in adj:
-		adj.remove(prev)
+    x_v, _ = vert[1]
+    x, _ = adj[0][1]
 
-	x_v, x_y = v[1]
-	x, y = adj[0][1]
-
-	if x > x_v:
-		return 1
-	elif x < x_v:
-		return -1
-	else:
-		return resolve_local_equality(adj_list, adj[0], v)
-
-
-if __name__ == '__main__':
-	if __package__ is None:
-		import os, sys
-		sys.path.insert(0, os.path.abspath("../.."))
-		from aux.geometry import rotation
-		from poly_operations.others import adjacency_edges as ae
-		from poly_operations.others import directions
-else:
-	from ...aux.geometry import rotation
-	from ...poly_operations.others import adjacency_edges as ae
-	from ...poly_operations.others import directions
-
-#print get_min_altitude(([[(0,0),(2,0),(2,1),(0,1)], []]))
-
+    if x > x_v:
+        return 1
+    if x < x_v:
+        return -1
+    return resolve_local_equality(neighbors_map, adj[0], vert)

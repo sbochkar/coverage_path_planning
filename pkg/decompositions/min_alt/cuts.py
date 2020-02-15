@@ -1,7 +1,4 @@
-from shapely.geometry import Polygon
-from shapely.geometry import Point
-from shapely.geometry import LinearRing
-from shapely.geometry import LineString
+from shapely.geometry import Polygon, Point, LinearRing, LineString
 from shapely.geometry.polygon import orient
 from ...aux.altitudes import altitude as alt
 from ...aux.geometry import rotation
@@ -80,7 +77,7 @@ def form_collinear_dictionary(s, v):
 	return collinear_dict
 
 
-def find_optimal_cut(polygon, vertex):
+def find_optimal_cut(polygon: Polygon, vertex: Point):
     """Given a polygon and a reflex vertex, finds and returns an optimal decomposing cut.
 
     Args:

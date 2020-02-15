@@ -1,8 +1,7 @@
 """Module for minimum altitude decomposition of polygons."""
 from math import sqrt
 from typing import List, Any
-from shapely.geometry import LineString
-from shapely.geometry import LinearRing
+from shapely.geometry import LineString, LinearRing, Polygon
 
 from pkg.aux.altitudes import altitude as alt
 from pkg.decompositions.min_alt import cuts
@@ -198,19 +197,30 @@ def reoptimize(P, decomposition, adj):
 
 
 
-def decompose(polygon: List[List[Any]]) -> Any:
+def decompose_temp(polygon: Polygon) -> Any:
     """High level call to minimum altitude decomposition.
 
-    Steps:
-        1. Connect all simple chains of a polygon
-        2. Perform a series of decomposing cuts
-        3 .Run an iterative minimization step to reoptimize cuts
-
     Args:
-        polygon (List[List[Any]]): Polygon in the standard form.
+        polygon (Polygon): Shapely object representing polygon.
     Returns:
-        decomposition: A set of polygons
+        decomposition: A set of polygons.
     """
+    candidate_queue: List[Any] = []
+    candidate_queue.append(polygon)
+
+    while candidate_queue:
+        polygon_candidate = candidate_queue.pop()
+
+        # TODO: Change the following func to return only one reflex vertex?
+        reflex_vert = reflex.find_reflex_vertices(polygon_candidate)[0]
+        cut = cuts.find_optimal_cut(polygon_candidate, reflex_vert)
+        # if cut:
+        #     p_l, p_r = cuts.perform_cut(polygon_candidate, [reflex_vert, cut[0]])
+
+        #     candidate_queue.append(p_l)
+        #     candidate_queue.append(p_r)
+
+def decompose(polygon: List[List[Any]]) -> Any:
     recursive_cuts(polygon)
 
     return list_of_polygons

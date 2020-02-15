@@ -4,7 +4,7 @@ import sys
 from pkg.poly_operations.hard_coded_lib import polygon_library
 from pkg.decompositions import adjacency
 from pkg.decompositions.greedy import greedy_decompose
-from decomposers import min_alt_decompose
+from decomposers import min_alt_dec
 from pkg.discritizers.line import min_alt_discrt
 #from pkg.discritizers.point import point_discrt
 from pkg.discritizers import get_mapping
@@ -63,7 +63,8 @@ def coverage_path_planner(polygon, robot, method):
 
     #return decomposition, adjacency_matrix, segments, tour, mapping
 
-    decomposition = min_alt_decompose.decompose(polygon)
+    from shapely.geometry import Polygon
+    decomposition = min_alt_dec.decompose_temp(Polygon(*polygon))
 
     #logger.info("Forming an adjacency matrix for polygons.")
     #adjacency_matrix = adjacency.get_adjacency_as_matrix(decomposition)

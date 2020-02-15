@@ -23,7 +23,7 @@ def get_cone_of_bisection(P, v):
     rad = sqrt((maxx-minx)**2+(maxy-miny)**2)	# "Dimater" of the polygon
 
     # Form an adjacency list for easy access to adjacent edges
-    adj = adj_e.get_edge_adjacency_as_dict(P)
+    adj = adj_e.get_neighbor_map(P)
 
     #Find adjacent edges of v
     v_l = adj[v][1][1]; v_r = adj[v][0][1]

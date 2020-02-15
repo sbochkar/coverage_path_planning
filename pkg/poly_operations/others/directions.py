@@ -1,41 +1,28 @@
+"""Computing directions of edges in a polygon."""
 from math import atan2
 from math import pi
+from typing import List
+
+from shapely.geometry import Polygon
 
 
-def get_directions_set(P):
-	"""
-	Generate a list of directions orthogonal to edges of P
+def get_directions_set(polygon: Polygon) -> List[float]:
+    """
+    Generate a list of directions orthogonal to edges of polygon
 
-	TODO: Get rid of repeating directions
+    TODO: Get rid of repeating directions
 
-	Augs:
-		P: standard form polygon
-	Returns:
-		dirs: set of directions [rad]
-	"""
+    Augs:
+            polygon: standard form polygon
+    Returns:
+            dirs: set of directions [rad]
+    """
+    dirs: List[float] = []
+    for ((a_x, a_y), (b_x, b_y)) in zip(polygon.exterior.coords[:-2], polygon.exterior.coords[1:]):
+        dirs.append(atan2(b_y - a_y, b_x - a_x) + pi / 2)
 
+    for hole in polygon.interiors:
+        for ((a_x, a_y), (b_x, b_y)) in zip(hole.coords[:-2], hole.coords[1:]):
+            dirs.append(atan2(b_y - a_y, b_x - a_x) + pi / 2)
 
-	ext = P[0]
-	holes = P[1]
-	dirs = []
-
-	n = len(ext)
-	for i in range(n):
-		edge = [ext[i], ext[(i+1)%n]]
-		#print edge
-		ax, ay = edge[0]
-		bx, by = edge[1]
-
-		dirs.append(atan2(by-ay, bx-ax)+pi/2)
-
-
-	for hole in holes:
-		n = len(hole)
-		for i in range(n):
-			edge = [hole[i], hole[(i+1)%n]]
-			ax, ay = edge[0]
-			bx, by = edge[1]
-
-			dirs.append(atan2(by-ay, bx-ax)+pi/2)
-
-	return dirs
+    return dirs
