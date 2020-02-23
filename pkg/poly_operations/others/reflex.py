@@ -24,7 +24,7 @@ def is_reflex(prev_vert: Tuple[float], mid_vert: Tuple[float], next_vert: Tuple[
     return False
 
 
-def find_reflex_vertices(polygon: Polygon):
+def find_reflex_vertices(polygon: Polygon) -> List[Point]:
     """Return a list of reflex vertices in polygon.
 
     Function will iterate over all vertices in polygon and return a list of reflex

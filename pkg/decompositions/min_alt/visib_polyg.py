@@ -1,80 +1,48 @@
-from shapely.geometry import LinearRing
-# from .visilibity import Point, Polygon, Environment, Visibility_Polygon
-from visilibity import Point, Polygon, Environment, Visibility_Polygon
+"""Interface layer with visilibity library."""
+from typing import List, Optional
+
+from shapely.geometry import LinearRing, Point, Polygon
+from visilibity import Point as VisPoint, Polygon as VisPolygon, Environment, Visibility_Polygon
+
+from log_utils import get_logger
 
 
-def compute(v, P):
+# pylint: disable=invalid-name
+logger = get_logger("visible_polygon")
+# pylint: enable=invalid-name
+
+
+EPSILON = 0.00001
+
+
+def compute_vis_polygon(polygon: Polygon, vertex: Point) -> Optional[Polygon]:
+    """Compute visible subset of polygon from vertex.
+
+    TODO: Confirm and ensure that the CCW/CW directions of exterior/interiors are true.
+
+    Args:
+        polygon (Polygon): Shapely object representing the polygon.
+        vertex (Point): Shapely object representing the vertex.
+
+    Returns:
+        visible_polygon (Polygon): Shapely object representing visible polygon.
     """
-    Compute the visible part of P from v
-    """
+    observer = VisPoint(vertex.x, vertex.y)
 
-    #print("Previsible polygon: %s"%(P,))
-    # Used for visilibity library
-    epsilon = 0.01
+    vis_polygons: List[VisPolygon] = []
+    for chain in [polygon.exterior, *polygon.interiors]:
+        vis_polygons.append(VisPolygon([VisPoint(*point) for point in chain.coords[:-1]]))
 
-    #Using the visilibity library, define the reflex vertex
-    observer = Point(*v[1])
-
-    # To put into standard form, do this
-    if not LinearRing(P[0]).is_ccw:
-        ext = P[0][::-1]
-    else:
-        ext = P[0]
-    x_min_idx, x_min = min(enumerate(ext), key=lambda x: x[1])
-    ext = ext[x_min_idx:]+ext[:x_min_idx]
-
-    #print x_min_idx, x_min
-
-    # Define the walls of intersection in Visilibity domain
-    wall_points = []
-    for point in ext:
-        wall_points.append(Point(*point))
-    #print 'Walls in standard form : ',vis.Polygon(wall_points).is_in_standard_form()
-
-    #for i in range(len(vis_intersection_wall_points)):
-            #print vis_intersection_wall_points[i].x(), vis_intersection_wall_points[i].y()
-            #print point.x(), point.y()
-
-    # Define the holes of intersection in Visilibity domain
-    holes = []
-    for interior in P[1]:
-        hole_points = []
-        for point in interior:
-            hole_points.append(Point(*point))
-
-        holes.append(hole_points)
-        #print 'Hole in standard form : ',vis.Polygon(hole_points).is_in_standard_form()
-
-    # Construct a convinient list
-    env = []
-    env.append(Polygon(wall_points))
-    for hole in holes:
-        env.append(Polygon(hole))
-
-    # Construct the whole envrionemt in Visilibity domain
-    env = Environment(env)
+    vis_environment = Environment(vis_polygons)
+    if not vis_environment.is_valid(EPSILON):
+        logger.error("Error when creating Visilibity environment.")
+        return None
 
     # Construct the visible polygon
-    observer.snap_to_boundary_of(env, epsilon)
-    observer.snap_to_vertices_of(env, epsilon)
+    observer.snap_to_boundary_of(vis_environment, EPSILON)
+    observer.snap_to_vertices_of(vis_environment, EPSILON)
 
-    vis_free_space = Visibility_Polygon(observer, env, epsilon)
+    visible_polygon = Visibility_Polygon(observer, vis_environment, EPSILON)
 
-    point_x, point_y  = save_print(vis_free_space)
-    point_x.append(vis_free_space[0].x())
-    point_y.append(vis_free_space[0].y())  
-
-    return point_x, point_y
-
-
-def save_print(polygon):
-    end_pos_x = []
-    end_pos_y = []
-    for i in range(polygon.n()):
-        x = polygon[i].x()
-        y = polygon[i].y()
-
-        end_pos_x.append(x)
-        end_pos_y.append(y)
-
-    return end_pos_x, end_pos_y 
+    return Polygon([(visible_polygon[i].x(),
+                     visible_polygon[i].y()) for i in range(visible_polygon.n())])

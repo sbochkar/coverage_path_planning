@@ -88,23 +88,23 @@ def get_altitude(polygon: Polygon, theta: float) -> float:
                 active_event_counter -= 1
                 checked_verts.append(neighbors_map[vert][0])
 
+        # TODO: Implement the case where both x coords are equal to curr x.
+
     return altitude
 
 
 def resolve_local_equality(neighbors_map: Dict[Tuple[float, float], Tuple[Tuple[float, float]]],
-                           vert: Tuple[float, float], prev):
-    """
-    Recursivley resolve which side the edges lie on
-    """
-    adj = [neighbors_map[vert][0], neighbors_map[vert][1]]
-    if prev in adj:
-        adj.remove(prev)
+                           curr_vert: Tuple[float, float], prev_vert: Tuple[float, float]):
+    """Recursivly determine the action in the case where adjacent edges are collinear."""
+    adjacent_verts = list(neighbors_map[curr_vert])
+    if prev_vert in adjacent_verts:
+        adjacent_verts.remove(prev_vert)
 
-    x_v, _ = vert[1]
-    x, _ = adj[0][1]
+    x_curr, _ = curr_vert
+    x_next, _ = adjacent_verts[0]
 
-    if x > x_v:
+    if x_next > x_curr:
         return 1
-    if x < x_v:
+    if x_next < x_curr:
         return -1
-    return resolve_local_equality(neighbors_map, adj[0], vert)
+    return resolve_local_equality(neighbors_map, adjacent_verts[0], curr_vert)

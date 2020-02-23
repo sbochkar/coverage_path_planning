@@ -24,6 +24,7 @@ def get_first_shared_edge(v, adj):
 def combine_polygons_from_decomposition(v, decomposition):
 
     # Build a set of all shared edges in the decomposition which shared v
+    # TODO: This does not create a copy....
     new_decomposition = decomposition
     adj = adjacency.get_adjacency_as_matrix(new_decomposition)
     shared_edge_tuple = get_first_shared_edge(v, adj)
@@ -214,11 +215,14 @@ def decompose_temp(polygon: Polygon) -> Any:
         # TODO: Change the following func to return only one reflex vertex?
         reflex_vert = reflex.find_reflex_vertices(polygon_candidate)[0]
         cut = cuts.find_optimal_cut(polygon_candidate, reflex_vert)
-        # if cut:
-        #     p_l, p_r = cuts.perform_cut(polygon_candidate, [reflex_vert, cut[0]])
+        if cut:
+            p_l, p_r = cuts.perform_cut(polygon_candidate, [reflex_vert, cut[0]])
 
-        #     candidate_queue.append(p_l)
-        #     candidate_queue.append(p_r)
+            candidate_queue.append(p_l)
+            candidate_queue.append(p_r)
+
+    # TODO: Need to convert candidate_queue into decomposition.
+
 
 def decompose(polygon: List[List[Any]]) -> Any:
     recursive_cuts(polygon)
