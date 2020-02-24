@@ -1,92 +1,32 @@
-import itertools
-from math import sqrt
-from typing import Any, List, Tuple
+from  itertools import combinations_with_replacement
+from typing import List, Tuple, Optional
 
+from shapely.affinity import rotate
 from shapely.geometry import Polygon, Point, LinearRing, LineString, CAP_STYLE
 from shapely.geometry.polygon import orient
 from shapely.ops import snap
 
-from ...aux.altitudes import altitude as alt
-from ...aux.geometry import rotation
-from ...poly_operations.others import chain_combination
-from ...poly_operations.others import reflex
-from ...poly_operations.others import directions
-from ...poly_operations.others import adjacency_edges as adj_e
-
-from .cone_of_bisection import get_cone_of_bisection
-from .visib_polyg import compute_vis_polygon
+from pkg.aux.altitudes.altitude import get_min_altitude
+from pkg.poly_operations.others.directions import get_directions_set
 from pkg.poly_operations.others.adjacency_edges import get_neighbor_map_shp
+from .visib_polyg import compute_vis_polygon
+from log_utils import get_logger
+
+
+# pylint: disable=invalid-name
+logger = get_logger("cuts")
+# pylint: enable=invalid-name
 
 
 LINE_LENGTH_THRESHOLD = 0.001
 BUFFER_RADIUS = 0.0001
 
-# Chech if three points are collinear
-def collinear(p1, p2, p3):
-    return abs((p1[1] - p2[1]) * (p1[0] - p3[0]) - (p1[1] - p3[1]) * (p1[0] - p2[0])) <= 1e-9
-
-
-def euc_distance(p1, p2):
-    return sqrt((p2[1] - p1[1])**2 + (p2[0] - p1[0])**2)
-
-
-def form_collinear_dictionary(s, v):
-    v = v.coords[0]
-    collinear_dict = {}
-    # Check all pairs of si in s, to see if their endpoitns are collinear
-    for si in s:
-        if collinear(v, si[0], si[1]):
-            if euc_distance(v, si[0]) < euc_distance(v, si[1]):
-                collinear_dict[si[1]] = si[0]
-            else:
-                collinear_dict[si[0]] = si[1]
-
-    for comb in itertools.combinations(s, 2):
-        si1 = comb[0]
-        si2 = comb[1]
-
-        # if one of the points are the same; ignore
-        pt_l1 = si1[0]
-        pt_l2 = si1[1]
-        pt_r1 = si2[0]
-        pt_r2 = si2[1]
-
-        if (pt_l1 == pt_r1) or (pt_l1 == pt_r2) or (pt_r2 == pt_l2) or (pt_r1 == pt_l2):
-            continue
-
-        # Case 1 to consider	
-        if collinear(v, pt_l1, pt_r1):
-            if euc_distance(v, pt_l1) < euc_distance(v, pt_r1):
-                collinear_dict[pt_r1] = pt_l1
-            else:
-                collinear_dict[pt_l1] = pt_r1
-
-        # Case 2 to consider	
-        if collinear(v, pt_l2, pt_r1):
-            if euc_distance(v, pt_l2) < euc_distance(v, pt_r1):
-                collinear_dict[pt_r1] = pt_l2
-            else:
-                collinear_dict[pt_l2] = pt_r1
-
-        # Case 3 to consider	
-        if collinear(v, pt_l2, pt_r2):
-            if euc_distance(v, pt_l2) < euc_distance(v, pt_r2):
-                collinear_dict[pt_r2] = pt_l2
-            else:
-                collinear_dict[pt_l2] = pt_r2
-
-        # Case 4 to consider	
-        if collinear(v, pt_l1, pt_r2):
-            if euc_distance(v, pt_l1) < euc_distance(v, pt_r2):
-                collinear_dict[pt_r2] = pt_l1
-            else:
-                collinear_dict[pt_l1] = pt_r2
-
-    return collinear_dict
-
 
 def find_optimal_cut(polygon: Polygon, vertex: Point) -> LineString:
     """Given a polygon and a reflex vertex, finds and returns an optimal decomposing cut.
+
+    TODO: Does not support cuts for polygons with holes.
+    TODO: Can narrow down the search space by only exploring some directions.
 
     Args:
         polygon (List[List[Any]]): Polygon in cannonical form.
@@ -95,53 +35,32 @@ def find_optimal_cut(polygon: Polygon, vertex: Point) -> LineString:
     Returns:
         cut (LineString): LineString object representing optimal cut.
     """
-    min_altitude, _ = alt.get_min_altitude(polygon)
-    search_space = find_cut_space(polygon, vertex)
-    min_altitude_idx = None
+    min_altitude, _ = get_min_altitude(polygon)
+    min_altitude_solution = None
+    for edge in find_cut_space(polygon, vertex):
+        for point in edge.coords:
+            p_l, p_r = perform_cut(polygon, [vertex, Point(point)])
+            a_l, theta_l = get_min_altitude(Polygon(p_l))
+            a_r, theta_r = get_min_altitude(Polygon(p_r))
 
-    # pois = []
-    # First, find edges on cut space that are collinear with reflex vertex
-    # collinear_dict = form_collinear_dictionary(search_space, vertex)
-    for edge in search_space:
+            if round(a_l + a_r, 5) < round(min_altitude, 5):
+                min_altitude = a_l + a_r
+                min_altitude_solution = Point(point), theta_l, theta_r
 
-        # # Process each edge, have to be cw. TODO: Why?
-        # lr_si = LinearRing([vertex.coords[0]] + edge)
-        # if lr_si.is_ccw:
-        #     edge = [edge[1]] + [edge[0]]
+            # # TODO: Add this later when the rest of optimization engine is stabilized.
+            # for dir_1, dir_2 in combinations_with_replacement(get_directions_set(polygon), 2):
+            #     # transition_point = find_best_transition_point(edge, vertex, dir_1, dir_2)
 
-        # cut_point = edge[0]
-        # p_l, p_r = perform_cut(polygon, [vertex.coords[0], cut_point])
+            #     p_l, p_r = perform_cut(polygon, [vertex, transition_point])
+            #     a_l = alt.get_altitude(Polygon(p_l), dir_1)
+            #     a_r = alt.get_altitude(Polygon(p_r), dir_2)
 
-        # TODO: Maybe we can just split the polygon.
+            #     if round(a_l + a_r, 5) < round(min_altitude, 5):
+            #         min_altitude = a_l + a_r
+            #         min_altitude_solution = transition_point, dir_1, dir_2
 
-        dirs_left = directions.get_directions_set(Polygon(p_l))
-        dirs_right = directions.get_directions_set(Polygon(p_r))
-
-        # Look for all transition points
-        for dir1 in dirs_left:
-            for dir2 in dirs_right:
-                tp = find_best_transition_point(edge, vertex[1], dir1, dir2)
-                # Here check if tp is collinear with vertex
-                # If so and invisible, replace with visible collinear point
-                if tp in collinear_dict.keys():
-                    pois.append((collinear_dict[tp], dir1, dir2))
-                else:
-                    pois.append((tp, dir1, dir2))
-
-    # Evaluate all transition points
-    for case in pois:
-        p_l, p_r = perform_cut(polygon, [vertex[1], case[0]])
-        a_l = alt.get_altitude([p_l, []], case[1])
-        a_r = alt.get_altitude([p_r, []], case[2])
-
-        #from math import degrees
-
-        if round(a_l+a_r, 5) < round(min_altitude, 5):
-                min_altitude = a_l+a_r
-                min_altitude_idx = case
-            
-
-    return min_altitude_idx
+    print(min_altitude_solution)
+    return min_altitude_solution
 
 
 def find_cut_space(polygon: Polygon, vertex: Point) -> List[LineString]:
@@ -186,36 +105,7 @@ def find_cut_space(polygon: Polygon, vertex: Point) -> List[LineString]:
     return cut_space
 
 
-def get_closest_intersecting_polygon(intersection, v):
-
-
-    # Need to check the type of intersection
-    if intersection.is_empty:
-        print("ERROR: intersection of cone with polygon is empty")
-        return None
-    elif intersection.geom_type == "Point": 
-        print("ERROR: intersection of cone with polygon is a point")
-        return None
-    elif intersection.geom_type == "LineString":
-        print("ERROR: intersection of cone with polygon is a line")
-        return None
-    elif intersection.geom_type == "MultiLineString":
-        print("ERROR: intersection of cone with polygon is a multiline")
-        return None
-    elif intersection.geom_type == "Polygon":
-        return intersection
-    elif intersection.geom_type == "MultiPolygon":
-        for poly in intersection:
-            if poly.intersects(Point(v[1])):
-                return poly
-    elif intersection.geom_type == "GeometryCollection":
-        for shape in intersection:
-            result =  get_closest_intersecting_polygon(shape, v)
-            if result is not None:
-                return result
-
-
-def find_transition_point(s_orig, theta, cut_origin):
+def find_transition_point(cone_line: LineString, theta: float, cut_origin: Point) -> Point:
     """
     Returns transition for a polygon, a cut space segment, and a direction of
             altitude
@@ -224,99 +114,82 @@ def find_transition_point(s_orig, theta, cut_origin):
             point.
 
     Args:
-            s: a straight line segment
-            theta: direction w.r.t. x-axis
-            cut_origin: vertex of origin of cone of bisection
+        cone_line (LineString): Line segment from the cone.
+        theta (float): direction w.r.t. x-axis
+        cut_origin (Point): Point representing the origin of the cut.
     Returns:
-            trans_point: a transition point
+        trans_point (Point): a transition point.
     """
+    rotated_cone_line = rotate(cone_line, -theta, origin=Point(0, 0))
+    rotated_cut_origin = rotate(cut_origin, -theta, origin=Point(0, 0))
 
-    s = rotation.rotate_points(s_orig, -theta)
-    cut_origin = rotation.rotate_points([cut_origin], -theta)[0]
+    y_s_min_idx, y_s_min = min(enumerate(rotated_cone_line.coords[:-1]), key=lambda x: x[1])
+    y_s_max_idx, y_s_max = max(enumerate(rotated_cone_line.coords[:-1]), key=lambda x: x[1])
 
-    y_s_min_idx, y_s_min = min(enumerate(s), key=lambda x: x[1][1])
-    y_s_max_idx, y_s_max = max(enumerate(s), key=lambda x: x[1][1])
-
-    x_s_min_idx, x_s_min = min(enumerate(s), key=lambda x: x[1][0])
-    x_s_max_idx, x_s_max = max(enumerate(s), key=lambda x: x[1][0])
+    x_s_min_idx, x_s_min = min(enumerate(rotated_cone_line.coords[:-1]), key=lambda x: x[0])
+    x_s_max_idx, x_s_max = max(enumerate(rotated_cone_line.coords[:-1]), key=lambda x: x[0])
 
     # Check the easy cases first
-    if x_s_min[0] >= cut_origin[0]:
-        return s_orig[x_s_min_idx]
-    elif x_s_max[0] <= cut_origin[0]:
-        return s_orig[x_s_max_idx]
-#	if y_s_min[1] >= cut_origin[1]:
-#		return s_orig[y_s_min_idx]
-#	elif y_s_max[1] <= cut_origin[1]:
-#		return s_orig[y_s_max_idx]
-    else:
-        # Find the intersection which corresponds to transition point
-        hyperplane = LineString([(cut_origin[0], y_s_max[1]+1), (cut_origin[0], y_s_min[1]-1)])
-        #hyperplane = LineString([(x_s_min[0], cut_origin[1]), (cut_origin[0], cut_origin[1])])
-        cut_segment = LineString(s)
-        transition_point = cut_segment.intersection(hyperplane)
+    if x_s_min[0] >= rotated_cut_origin.x:
+        return Point(cone_line.coords[x_s_min_idx])
 
-        if not transition_point:
-                print("Not suppose to happen")
-        return rotation.rotate_points([transition_point.coords[0]], theta)[0]
+    if x_s_max[0] <= rotated_cut_origin.x:
+        return Point(cone_line.coords[x_s_max_idx])
+#	if y_s_min[1] >= rotated_cut_origin[1]:
+#		return cone_line[y_s_min_idx]
+#	elif y_s_max[1] <= rotated_cut_origin[1]:
+#		return cone_line[y_s_max_idx]
+    # Find the intersection which corresponds to transition point
+    hyperplane = LineString([(rotated_cut_origin.x, y_s_max[1] + 1),
+                             (rotated_cut_origin.y, y_s_min[1] - 1)])
+    transition_point = rotated_cone_line.intersection(hyperplane)
 
+    if not transition_point:
+        print("Not suppose to happen")
+    return rotate(transition_point, theta, origin=Point(0, 0))
 
 
-
-
-
-
-def find_best_transition_point(s, cut_origin, dir_l, dir_r):
-    """
-    Find the best transition point from the left and right polygon
+def find_best_transition_point(cone_line: LineString,
+                               cut_origin: Point, dir_l: float, dir_r: float) -> Optional[Point]:
+    """Find the best transition point from the left and right polygon.
 
     Given left and right polygons, cut segment, and two altitude directions,
     return the best transition point.
 
     Args:
-
-            s:
-            dir_l:
-            dir_r:
+        cone_line (LineString): Shapely object representing cone line.
+        cut_origin (Point): Shapely object representing the root vertex of the cut.
+        dir_l (float): direction to explore.
+        dir_r (float): direction to explore:
     Returns:
-            trans_point: a transition point
+        trans_point (Point): a transition point
     """
+    transition_l = find_transition_point(cone_line, dir_l, cut_origin)
+    transition_r = find_transition_point(cone_line, dir_r, cut_origin)
+    x_s, y_s = cone_line.coords[0]
 
-
-    from math import degrees
-    t_l = find_transition_point(s, dir_l, cut_origin)
-    t_r = find_transition_point(s, dir_r, cut_origin)
-    x_s, y_s = s[0]
-
-    x_t_l, y_t_l = t_l
-    x_t_r, y_t_r = t_r
-
-    dt_l = (x_t_l-x_s)**2+(y_t_l-y_s)**2
-    dt_r = (x_t_r-x_s)**2+(y_t_r-y_s)**2
+    dt_l = (transition_l.x - x_s)**2 + (transition_l.y - y_s)**2
+    dt_r = (transition_r.x - x_s)**2 + (transition_r.y - y_s)**2
 
     if dt_l >= dt_r:
-        return t_r
-    else:
+        return transition_r
 
-        s_l = rotation.rotate_points(s,-dir_l)
-        ds_l = abs(s_l[1][0]-s_l[0][0])
+    rotated_cone_line_l = rotate(cone_line, -dir_l, origin=Point(0, 0))
+    ds_l = abs(rotated_cone_line_l.coords[1][0] - rotated_cone_line_l.coords[0][0])
 
-        s_r = rotation.rotate_points(s,-dir_r)
-        ds_r = abs(s_r[1][0]-s_r[0][0])
+    rotated_cone_line_r = rotate(cone_line, -dir_r, origin=Point(0, 0))
+    ds_r = abs(rotated_cone_line_r.coords[1][0] - rotated_cone_line_r.coords[0][0])
 
-        if ds_l > ds_r:
-            return t_l
-        else:
-            return t_r
+    if ds_l > ds_r:
+        return transition_l
+    return transition_r
 
 
 def perform_cut(P, e):
     """
     Split up P into two polygons by cutting along e
     """
-
-    v = e[0]
-    w = e[1]
+    v, w = e
     chain = P.exterior
 
     distance_to_v = chain.project(Point(v))
@@ -372,42 +245,32 @@ def perform_cut(P, e):
 
 
 def cut(line, distance):
-	"""
-	Splicing a line
-	Credits go to author of the shapely manual
-	"""
-	# Cuts a line in two at a distance from its starting point
-	if distance <= 0.0 or distance >= line.length:
-		print("ERROR: CUT BEYONG LENGTH")
-		print(line)
-		print(distance)
-		return [LineString(line), []]
-
-	coords = list(line.coords)
-	pd = 0
-	#for i, p in enumerate(coords):
-	for i in range(len(coords)):
-		if i > 0:
-			pd = LineString(coords[:i+1]).length
-		#pd = line.project(Point(p))
-		if pd == distance:
-			return [
-				LineString(coords[:i+1]),
-				LineString(coords[i:])]
-		if pd > distance:
-			cp = line.interpolate(distance)
-			return [
-				LineString(coords[:i] + [(cp.x, cp.y)]),
-				LineString([(cp.x, cp.y)] + coords[i:])]
-		if i == len(coords)-1:
-			cp = line.interpolate(distance)
-			return [
-				LineString(coords[:i] + [(cp.x, cp.y)]),
-				LineString([(cp.x, cp.y)] + coords[i:])]
-
-
-def iterative_project(line, distance):
     """
-    To account for self crossing edges
+    Splicing a line
+    Credits go to author of the shapely manual
     """
-    pass
+    # Cuts a line in two at a distance from its starting point
+    if distance <= 0.0 or distance >= line.length:
+        print("ERROR: CUT BEYONG LENGTH")
+        print(line)
+        print(distance)
+        return [LineString(line), []]
+
+    coords = list(line.coords)
+    pd = 0
+    #for i, p in enumerate(coords):
+    for i in range(len(coords)):
+        if i > 0:
+            pd = LineString(coords[:i+1]).length
+        #pd = line.project(Point(p))
+        if pd == distance:
+            return [LineString(coords[:i+1]),
+                    LineString(coords[i:])]
+        if pd > distance:
+            cp = line.interpolate(distance)
+            return [LineString(coords[:i] + [(cp.x, cp.y)]),
+                    LineString([(cp.x, cp.y)] + coords[i:])]
+        if i == len(coords)-1:
+            cp = line.interpolate(distance)
+            return [LineString(coords[:i] + [(cp.x, cp.y)]),
+                    LineString([(cp.x, cp.y)] + coords[i:])]

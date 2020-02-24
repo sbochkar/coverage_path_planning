@@ -6,7 +6,7 @@ from shapely.geometry import Polygon
 from shapely.affinity import rotate
 
 from pkg.poly_operations.others.adjacency_edges import get_neighbor_map
-from ...poly_operations.others import directions
+from pkg.poly_operations.others.directions import get_directions_set
 
 
 def get_min_altitude(polygon: Polygon):
@@ -19,7 +19,7 @@ def get_min_altitude(polygon: Polygon):
     """
     min_alt = sys.float_info.max
     min_dir = 0
-    for theta in directions.get_directions_set(polygon):
+    for theta in get_directions_set(polygon):
         test_alt = get_altitude(polygon, theta)
         if test_alt <= min_alt:
             min_alt = test_alt

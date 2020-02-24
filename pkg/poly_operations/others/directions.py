@@ -1,28 +1,26 @@
 """Computing directions of edges in a polygon."""
-from math import atan2
-from math import pi
-from typing import List
+from math import atan2, pi
+from typing import Set
 
-from shapely.geometry import Polygon
+from shapely.geometry import LineString, Polygon, Point
+from shapely.affinity import rotate, translate
 
 
-def get_directions_set(polygon: Polygon) -> List[float]:
-    """
-    Generate a list of directions orthogonal to edges of polygon
+def get_directions_set(polygon: Polygon) -> Set[float]:
+    """Generate a list of directions orthogonal to edges of polygon
 
-    TODO: Get rid of repeating directions
-
-    Augs:
-            polygon: standard form polygon
+    Args:
+        polygon (Polygon): Polygon as a shapely object.
     Returns:
-            dirs: set of directions [rad]
+        dirs (Set): Set of directions in degrees.
     """
-    dirs: List[float] = []
-    for ((a_x, a_y), (b_x, b_y)) in zip(polygon.exterior.coords[:-2], polygon.exterior.coords[1:]):
-        dirs.append(atan2(b_y - a_y, b_x - a_x) + pi / 2)
-
-    for hole in polygon.interiors:
-        for ((a_x, a_y), (b_x, b_y)) in zip(hole.coords[:-2], hole.coords[1:]):
-            dirs.append(atan2(b_y - a_y, b_x - a_x) + pi / 2)
+    dirs: Set[float] = set()
+    for chain in [polygon.exterior, *polygon.interiors]:
+        for idx, coord in enumerate(chain.coords[:-1]):
+            edge = LineString([coord, chain.coords[idx + 1]])
+            edge = rotate(edge, 90, origin=Point(coord))  # Perpendicular to the edge.
+            edge = translate(edge, xoff=-coord[0], yoff=-coord[1])  # Direction vector.
+            deg = atan2(edge.coords[1][1], edge.coords[1][0]) % pi
+            dirs.add(180 * deg / pi)
 
     return dirs
