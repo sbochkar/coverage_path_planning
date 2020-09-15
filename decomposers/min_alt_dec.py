@@ -206,21 +206,13 @@ def decompose_temp(polygon: Polygon) -> Any:
     Returns:
         decomposition: A set of polygons.
     """
-    candidate_queue: List[Any] = []
-    candidate_queue.append(polygon)
+    improving_cuts: List[LineString] = []
+    for reflex_vert in reflex.find_reflex_vertices(polygon):
+        cut = cuts.find_optimal_cut(polygon, reflex_vert)
+        if cut:
+            improving_cuts.append(cut)
 
-    while candidate_queue:
-        polygon_candidate = candidate_queue.pop()
-
-        # TODO: Change the following func to return only one reflex vertex?
-        for reflex_vert in reflex.find_reflex_vertices(polygon_candidate):
-            cut = cuts.find_optimal_cut(polygon_candidate, reflex_vert)
-            if cut:
-                p_l, p_r = cuts.perform_cut(polygon_candidate, [reflex_vert, cut[0]])
-
-                candidate_queue.append(p_l)
-                candidate_queue.append(p_r)
-                break
+    p_l, p_r = cuts.perform_cut(polygon, [reflex_vert, cut[0]])
 
     # TODO: Need to convert candidate_queue into decomposition.
 

@@ -59,7 +59,6 @@ def find_optimal_cut(polygon: Polygon, vertex: Point) -> LineString:
             #         min_altitude = a_l + a_r
             #         min_altitude_solution = transition_point, dir_1, dir_2
 
-    print(min_altitude_solution)
     return min_altitude_solution
 
 
