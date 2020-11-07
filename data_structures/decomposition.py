@@ -155,3 +155,42 @@ def cut(decomposition: Decomposition,
     decomposition.cells.append(res_p2)
 
     return res_p1, res_p2
+
+
+def stage_undo_cut(decomposition: Decomposition,
+                   point_1: Tuple[float],
+                   point_2: Tuple[float]) -> Tuple[Polygon, Polygon, Polygon]:
+    """Perofrms a cut on a decomposition. Modifies the decomposition.
+
+    Split a polygon into two other polygons along split_line.
+
+    Args:
+        decomposition (Decomposition): An instance of decomposition.
+        point_1 (Tuple[float]): point_1
+        point_2 (Tuple[float]): point_2
+
+    Returns:
+        res_p1 (Polygon): Resultant polygon aligned with the cut line.
+        res_p2 (Polygon): Another resultant polygon aligned against the cut line.
+        Return empty polygons if invalid conditions were encountered.
+    """
+    split_line = LineString([point_1, point_2])
+
+    res_p1_pol, res_p2_pol = None, None
+    for cell in decomposition.cells:
+        # Enforce convention where first polygon is aligned with cut and second isn't.
+        res = shared_paths(cell.exterior, split_line)
+        if not res.is_empty:
+            fwd, bwd = res
+            if not fwd.is_empty:
+                res_p1_pol = cell
+            if not bwd.is_empty:
+                res_p2_pol = cell
+
+    if not res_p1_pol or not res_p2_pol:
+        return Polygon([]), Polygon([]), Polygon([])
+
+    assert res_p2_pol, "Did not find a cell mis-aligned with the cut."
+
+    union = res_p1_pol.union(res_p2_pol)
+    return union, res_p1_pol, res_p2_pol
