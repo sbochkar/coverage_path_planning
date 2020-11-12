@@ -48,33 +48,47 @@ def test_decomposition_init_error(test_polygon):
 
 # ------------------------------ Decomposition cuts ---------------------------------------------- #
 @pytest.mark.parametrize('init_polygon, test_cut, res_p1, res_p2', [
+    # Normal cut on a square polygon.
     ([(0., 0.), (1., 0.), (1., 1.), (0., 1.)],
      [(0., 0.), (1., 1.)],
      [(0., 0.), (1., 1.), (0., 1.)],
      [(0., 0.), (1., 0.), (1., 1.)]),
+    # Normal cut on a square polygon with a cut going opposite direction.
     ([(0., 0.), (1., 0.), (1., 1.), (0., 1.)],
      [(1., 1.), (0., 0.)],
      [(0., 0.), (1., 0.), (1., 1.)],
      [(0., 0.), (1., 1.), (0., 1.)]),
+    # Normal cut on a square polygon with cut with one vertex not on the vertecies of the polygon.
     ([(0., 0.), (1., 0.), (1., 1.), (0., 1.)],
      [(0.5, 1.), (0., 0.)],
      [(0., 0.), (1., 0.), (1., 1.), (0.5, 1.)],
      [(0., 0.), (0.5, 1.), (0., 1.)]),
+    # Normal cut on a square polygon with cut that is not on the vertecies of the polygon.
     ([(0., 0.), (1., 0.), (1., 1.), (0., 1.)],
      [(0.5, 0.), (0.5, 1.)],
      [(0., 0.), (0.5, 0.), (0.5, 1.), (0., 1.)],
      [(0.5, 0.), (1., 0.), (1., 1.), (0.5, 1.)]),
+    # Normal cut but resulting polygon is tiny.
+    ([(0., 0.), (1., 0.), (1., 1.), (0., 1.)],
+     [(0., 10e-10), (1., 10e-10)],
+     [(0., 10e-10), (1., 10e-10), (1., 1.), (0., 1.)],
+     [(0., 0.), (1., 0.), (1., 10e-10), (0., 10e-10)]),
     # Invalid: non-decomposing cut.
     ([(0., 0.), (1., 0.), (1., 1.), (0., 1.)],
      [(0., 0.), (0.5, 0.5)],
      [],
      []),
-    # Invalid: non-decomposing cut.
+    # Invalid: non-decomposing cut completely on the inside the polygon.
+    ([(0., 0.), (1., 0.), (1., 1.), (0., 1.)],
+     [(0.2, 0.2), (0.5, 0.5)],
+     [],
+     []),
+    # Invalid: non-decomposing cut extending beyond exterior.
     ([(0., 0.), (1., 0.), (1., 1.), (0., 1.)],
      [(0., 0.), (1.5, 1.5)],
      [],
      []),
-    # Invalid: invalid cut.
+    # Invalid: invalid cut of length 0.
     ([(0., 0.), (1., 0.), (1., 1.), (0., 1.)],
      [(0., 0.), (0., 0.)],
      [],
@@ -84,6 +98,32 @@ def test_decomposition_init_error(test_polygon):
      [(0., 0.), (1., 0.)],
      [],
      []),
+    # Invalid: incomplete cut partially outside of the polygon.
+    ([(0., 0.), (1., 1.), (2., 0.), (2., 2.), (0., 2.)],
+     [(0., 0.), (1., 0.)],
+     [],
+     []),
+    # Invalid: incomplete cut completely outside of the polygon.
+    ([(0., 0.), (1., 1.), (2., 0.), (2., 2.), (0., 2.)],
+     [(-1., -1.), (-2., -2.)],
+     [],
+     []),
+    # Invalid: complete cut outside of the polygon.
+    ([(0., 0.), (1., 1.), (2., 0.), (2., 2.), (0., 2.)],
+     [(0., 0.), (2., 0.)],
+     [],
+     []),
+    # Invalid: cut incident on 3 points on the exterior.
+    ([(0., 0.), (1., 1.), (2., 0.), (2., 2.), (0., 2.)],
+     [(0., 1.), (2., 1.)],
+     [],
+     []),
+    # Invalid: cut partially aligned with one of the edges of the polygon.
+    ([(0., 0.), (1., 1.), (2., 0.), (2., 2.), (0., 2.)],
+     [(0., 0.), (2., 2.)],
+     [],
+     []),
+    # TODO: Write tests for polygons with holes.
 ])
 def test_stage_cut_on_empty_decomposition(init_polygon, test_cut, res_p1, res_p2):
     """
@@ -151,7 +191,7 @@ def test_cut_on_empty_decomposition(init_polygon, test_cut, res_p1, res_p2, is_i
 
 
 @pytest.mark.parametrize('init_polygon, test_cut, orig_cell, res_p1, res_p2', [
-    # Invalid: cut already exists
+    # Invalid: cut already exists.
     ([(0., 0.), (1., 0.), (1., 1.), (0., 1.)],
      [(0., 0.), (1., 1.)],
      [],
@@ -169,13 +209,30 @@ def test_cut_on_empty_decomposition(init_polygon, test_cut, res_p1, res_p2, is_i
      [(0., 0.), (1., 0.), (1., 1.)],
      [(0.5, 0.5), (1., 0.), (1., 1.)],
      [(0.5, 0.5), (0., 0.), (1., 0.)]),
-    # Cut originating from another's cut vertex.
+    # Cut originating from another cut vertex.
     ([(0., 0.), (1., 0.), (1., 1.), (0., 1.)],
      [(0., 0.), (1., 0.5)],
      [(0., 0.), (1., 0.), (1., 1.)],
      [(0., 0.), (1., 0.5), (1., 1.)],
      [(0., 0.), (1., 0.), (1., 0.5)]),
-    # TODO: Implement a test case that encounters an issue with floating point representation.
+    # Testing a cut not incident to another cut.
+    ([(0., 0.), (1., 0.), (1., 1.), (0., 1.)],
+     [(0.1, 0.), (1., 0.5)],
+     [(0., 0.), (1., 0.), (1., 1.)],
+     [(0.1, 0.), (1., 0.5), (1., 1.), (0., 0.)],
+     [(0.1, 0.), (1., 0.), (1., 0.5)]),
+    # Testing precision.
+    ([(0., 0.), (1., 0.), (1., 1.), (0., 1.)],
+     [(1/3, 1/3), (1., 0.5)],
+     [(0., 0.), (1., 0.), (1., 1.)],
+     [(1/3, 1/3), (1., 0.5), (1., 1.)],
+     [(1/3, 1/3), (0., 0.), (1., 0.), (1., 0.5)]),
+    # Testing precision with really small values.
+    ([(0., 0.), (1., 0.), (1., 1.), (0., 1.)],
+     [((1/3)*10e-35, (1/3)*10e-35), (1., 0.5)],
+     [(0., 0.), (1., 0.), (1., 1.)],
+     [((1/3)*10e-35, (1/3)*10e-35), (1., 0.5), (1., 1.)],
+     [((1/3)*10e-35, (1/3)*10e-35), (0., 0.), (1., 0.), (1., 0.5)]),
 ])
 def test_stage_cut_on_non_empty_decomposition(init_polygon, test_cut, orig_cell,
                                               res_p1, res_p2):
@@ -208,30 +265,6 @@ def test_stage_cut_on_non_empty_decomposition(init_polygon, test_cut, orig_cell,
      [(0., 0.), (1., 0.), (1., 1.)],
      [(0.5, 0.5), (1., 0.), (1., 1.)],
      [(0.5, 0.5), (0., 0.), (1., 0.)]),
-    # Cut originating from another's cut vertex.
-    ([(0., 0.), (1., 0.), (1., 1.), (0., 1.)],
-     [(0., 0.), (1., 0.5)],
-     [(0., 0.), (1., 0.), (1., 1.)],
-     [(0., 0.), (1., 0.5), (1., 1.)],
-     [(0., 0.), (1., 0.), (1., 0.5)]),
-    # Testing a cut not incident to another cut.
-    ([(0., 0.), (1., 0.), (1., 1.), (0., 1.)],
-     [(0.1, 0.), (1., 0.5)],
-     [(0., 0.), (1., 0.), (1., 1.)],
-     [(0.1, 0.), (1., 0.5), (1., 1.), (0., 0.)],
-     [(0.1, 0.), (1., 0.), (1., 0.5)]),
-    # Testing precision.
-    ([(0., 0.), (1., 0.), (1., 1.), (0., 1.)],
-     [(1/3, 1/3), (1., 0.5)],
-     [(0., 0.), (1., 0.), (1., 1.)],
-     [(1/3, 1/3), (1., 0.5), (1., 1.)],
-     [(1/3, 1/3), (0., 0.), (1., 0.), (1., 0.5)]),
-    # Testing precision with really small vertecies.
-    ([(0., 0.), (1., 0.), (1., 1.), (0., 1.)],
-     [((1/3)*10e-35, (1/3)*10e-35), (1., 0.5)],
-     [(0., 0.), (1., 0.), (1., 1.)],
-     [((1/3)*10e-35, (1/3)*10e-35), (1., 0.5), (1., 1.)],
-     [((1/3)*10e-35, (1/3)*10e-35), (0., 0.), (1., 0.), (1., 0.5)]),
 ])
 def test_cut_on_non_empty_decomposition(init_polygon, test_cut, orig_cell,
                                         res_p1, res_p2):
@@ -253,53 +286,6 @@ def test_cut_on_non_empty_decomposition(init_polygon, test_cut, orig_cell,
         assert any([poly.equals(Polygon(res_p1)) for poly in decomp.cells])
     if res_p2:
         assert any([poly.equals(Polygon(res_p2)) for poly in decomp.cells])
-
-
-@pytest.mark.parametrize('init_polygon', [
-    ([(0., 0.), (1., 0.), (1., 1.), (0., 1.)]),
-])
-def test_cut_on_non_empty_decomposition_sweep(init_polygon):
-    """
-    Verifies that function applies a cut to a decomposition with existing cells. Verify that
-    existing decompostion gets modified accordingly.
-    """
-    decomp = Decomposition(init_polygon)
-    cut(decomp, (0., 0.), (1., 0.1))
-
-    import numpy as np
-    from shapely.geometry import LineString
-
-    orig_cut = LineString([(0., 0.,), (1., 0.1)])
-    for distance in np.linspace(0, 0.99, num=10):
-        p_1 = orig_cut.interpolate(distance, normalized=True)
-
-        new_cut = [(p_1.x, p_1.y), (1., 0.05)]
-        orig, poly_1, poly_2 = stage_cut(decomp, *new_cut)
-
-        
-        expected_p1 = [(p_1.x, p_1.y), (1., 0.05), (1., 0.1)]
-        expected_p2 = [(p_1.x, p_1.y), (0., 0.), (1., 0.), (1., 0.05)]
-        print(poly_1)
-        assert poly_1.equals(Polygon(expected_p1))
-        assert poly_2.equals(Polygon(expected_p2))
-        assert orig.equals(poly_1.union(poly_2))
-
-
-
-        
-
-
-    # poly_1, poly_2 = cut(decomp, *test_cut)
-
-    # assert poly_1.equals(Polygon(res_p1))
-    # assert poly_2.equals(Polygon(res_p2))
-
-    # assert len(decomp.cells) == (2 if not orig_cell else 3)
-    # assert not any([poly.equals(Polygon(init_polygon)) for poly in decomp.cells])
-    # if res_p1:
-    #     assert any([poly.equals(Polygon(res_p1)) for poly in decomp.cells])
-    # if res_p2:
-    #     assert any([poly.equals(Polygon(res_p2)) for poly in decomp.cells])
 
 
 def test_stage_undo_cut_invalid():

@@ -19,7 +19,8 @@ RUN apt-get update && \
         matplotlib \
         descartes \
         py2d-fixed \
-        dubins
+        dubins \
+        pytest
 
 WORKDIR /tmp
 RUN cd /tmp \
