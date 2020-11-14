@@ -118,9 +118,9 @@ def cut(decomposition: Decomposition,
 def stage_undo_cut(decomposition: Decomposition,
                    point_1: Tuple[float],
                    point_2: Tuple[float]) -> Tuple[Polygon, Polygon, Polygon]:
-    """Perofrms a cut on a decomposition. Modifies the decomposition.
+    """Undoes a cut in a decomposition. Does not modify the decomposition.
 
-    Split a polygon into two other polygons along split_line.
+    Performs union of the two adjacent cells that share the split line. Given it's valid.
 
     Args:
         decomposition (Decomposition): An instance of decomposition.
@@ -128,27 +128,69 @@ def stage_undo_cut(decomposition: Decomposition,
         point_2 (Tuple[float]): point_2
 
     Returns:
-        res_p1 (Polygon): Resultant polygon aligned with the cut line.
-        res_p2 (Polygon): Another resultant polygon aligned against the cut line.
+        union (Polygon): Resultant polygon from the union.
+        res_p1 (Polygon): Original polygon adjacent to the split line. Aligned with the cut.
+        res_p2 (Polygon): Original polygon adjacent to the split line. Not aligned with the cut.
         Return empty polygons if invalid conditions were encountered.
     """
     split_line = LineString([point_1, point_2])
 
-    res_p1_pol, res_p2_pol = None, None
-    for cell in decomposition.cells:
-        # Enforce convention where first polygon is aligned with cut and second isn't.
-        res = shared_paths(cell.exterior, split_line)
-        if not res.is_empty:
-            fwd, bwd = res
-            if not fwd.is_empty:
-                res_p1_pol = cell
-            if not bwd.is_empty:
-                res_p2_pol = cell
+    def is_compat_with_cell(cell):
+        """Perform validity checks of the given cell w.r.t the split_line."""
+        intersection = cell.exterior.intersection(split_line)
 
-    if not res_p1_pol or not res_p2_pol:
+        if (intersection.is_empty or  # Does not intersect.
+                not intersection.geom_type == 'LineString' or  # Intersects but not just a line.
+                not intersection.equals(split_line)):  # Intersection is a subset of an edge.
+            return False
+        return True
+
+    valid_cells = list(map(is_compat_with_cell, decomposition.cells))
+
+    # Only 2 cells can be compatible with undo at a time.
+    if sum(valid_cells) != 2:
         return Polygon([]), Polygon([]), Polygon([])
 
-    assert res_p2_pol, "Did not find a cell mis-aligned with the cut."
+    res_p1, res_p2 = [decomposition.cells[i] for i, is_valid in enumerate(valid_cells) if is_valid]
 
-    union = res_p1_pol.union(res_p2_pol)
-    return union, res_p1_pol, res_p2_pol
+    # Enforce convention where first cell is aligned with cut and second isn't.
+    fwd, _ = shared_paths(res_p1.exterior, split_line)
+    if fwd.is_empty:
+        res_p1, res_p2 = res_p2, res_p1
+
+    union = res_p1.union(res_p2)
+
+    # Perform sanity checks after the union: valid union and if merged cut is equal specified line.
+    if not union.is_valid or \
+            not res_p1.exterior.difference(union.exterior).equals(split_line):
+        return Polygon([]), Polygon([]), Polygon([])
+
+    return union, res_p1, res_p2
+
+
+def undo_cut(decomposition: Decomposition, point_1: Tuple[float],
+             point_2: Tuple[float]) -> Polygon:
+    """Undoes a cut in a decomposition. Modifies the decomposition.
+
+    Performs union of the two adjacent cells that share the split line. Given it's valid.
+
+    Args:
+        decomposition (Decomposition): An instance of decomposition.
+        point_1 (Tuple[float]): point_1
+        point_2 (Tuple[float]): point_2
+
+    Returns:
+        union (Polygon): Resultant polygon from the union.
+        Return empty polygons if invalid conditions were encountered.
+    """
+    new_cell, res_p1, res_p2 = stage_undo_cut(decomposition, point_1, point_2)
+
+    if new_cell.is_empty:
+        return new_cell
+
+    decomposition.cells.remove(res_p1)
+    decomposition.cells.remove(res_p2)
+
+    decomposition.cells.append(new_cell)
+
+    return new_cell
