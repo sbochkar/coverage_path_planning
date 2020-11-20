@@ -14,21 +14,18 @@ class Decomposition:  # pylint: disable=too-few-public-methods # Container class
         'orig_polygon',
     )
 
-    def __init__(self, polygon: List[Tuple[float, float]]):
+    def __init__(self, polygon: Polygon):
         """Constructor for Decomposition object.
 
         Args:
             polygon (List): List of tuples representing points.
         """
-        assert polygon and len(polygon) > 2, "Cannot create decomposition from invalid polygon."
+        assert not polygon.is_empty, "Cannot create decomposition from empty polygon."
+        assert polygon.is_valid, "Cannot create decomposition from invalid polygon."
 
-        sh_polygon = Polygon(polygon)
-
-        assert sh_polygon.is_valid, "Passed polygon is not valid."
-
-        self.orig_polygon = sh_polygon
+        self.orig_polygon = polygon
         self.exterior = self.orig_polygon.exterior
-        self.cells: List[Polygon] = [sh_polygon]
+        self.cells: List[Polygon] = [polygon]
 
 
 def stage_cut(decomposition: Decomposition,
