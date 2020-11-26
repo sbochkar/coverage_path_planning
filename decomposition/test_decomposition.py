@@ -126,7 +126,23 @@ def test_decomposition_init_error(test_polygon):
      [[(0., 0.), (1., 0.), (1., 1.)]],
      [[((1/3)*10e-35, (1/3)*10e-35), (1., 0.5), (1., 1.)]],
      [[((1/3)*10e-35, (1/3)*10e-35), (0., 0.), (1., 0.), (1., 0.5)]]),
-    # TODO: Write tests for polygons with holes.
+    # Polygon with a hole but cut does not touch the hole.
+    (UNIT_HOLE_SQUARE,
+     [],
+     [(0.05, 0.), (0.05, 1.)],
+     UNIT_HOLE_SQUARE,
+     [[(0., 0.), (0.05, 0.), (0.05, 1.), (0., 1.)]],
+     [[(0.05, 0.), (1., 0.), (1., 1.), (0.05, 1.)],
+      [[(0.1, 0.1), (0.1, 0.9), (0.9, 0.9), (0.9, 0.1)]]]),
+    # Polygon with a hole with pre-existing cut.
+    (UNIT_HOLE_SQUARE,
+     [(0.05, 0.), (0.05, 1.)],
+     [(0.95, 0.), (0.95, 1.)],
+     [[(0.05, 0.), (1., 0.), (1., 1.), (0.05, 1.)],
+      [[(0.1, 0.1), (0.1, 0.9), (0.9, 0.9), (0.9, 0.1)]]],
+     [[(0.05, 0.), (0.95, 0.), (0.95, 1.), (0.05, 1.)],
+      [[(0.1, 0.1), (0.1, 0.9), (0.9, 0.9), (0.9, 0.1)]]],
+     [[(0.95, 0.), (0.95, 1.), (1., 1.), (1., 0.)]]),
 ])
 def test_stage_cut(init_polygon, pre_test_cut, test_cut, orig_poly, res_p1, res_p2):
     """
@@ -212,6 +228,26 @@ def test_stage_cut(init_polygon, pre_test_cut, test_cut, orig_poly, res_p1, res_
     (UNIT_SQUARE,
      [(0., 0.), (1., 1.)],
      [(1., 0.), (0., 1.)],
+    ),
+    # Invalid: polygon with hole and cut incident on a hole.
+    (UNIT_HOLE_SQUARE,
+     [],
+     [(0., 0.), (0.1, 0.1)],
+    ),
+    # Invalid: polygon with hole and cut touching hole's boundary.
+    (UNIT_HOLE_SQUARE,
+     [],
+     [(0., 2.), (2., 0.)],
+    ),
+    # Invalid: polygon with hole and cut crossing a hole.
+    (UNIT_HOLE_SQUARE,
+     [],
+     [(0., 0.), (1., 1.)],
+    ),
+    # Invalid: polygon with hole and cut touching the boundary of whole.
+    (UNIT_HOLE_SQUARE,
+     [],
+     [(0.1, 0.), (0.1, 1.)],
     ),
 ])
 def test_stage_cut_invalid(init_polygon, pre_test_cut, test_cut):
