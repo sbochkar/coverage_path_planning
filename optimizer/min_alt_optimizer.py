@@ -1,11 +1,10 @@
 """Module for minimum altitude decomposition of polygons."""
 from typing import List, Tuple
 
-from numpy import linspace
 from shapely.geometry import LineString, LinearRing, Polygon, MultiLineString
 
-
-from decomposition.decomposition import Decomposition
+from decomposition.decomposition import Decomposition, stage_cut, cut
+from altitudes.altitude import get_min_altitude
 
 # from pkg.aux.altitudes import altitude as alt
 # from pkg.decompositions.min_alt import cuts
@@ -85,6 +84,38 @@ def get_cut_origins(decomposition: Decomposition) -> List[Tuple[float, float]]:
                 if is_reflex((points[i - 1]), points[i], points[(i + 1) % len(points)]):
                     reflex_verts.append(points[i])
     return reflex_verts
+
+
+def min_alt_optimize(decomposition: Decomposition, samples: List[LineString]):
+    """Simple optimizer that iterates over the sample space and performs one improvement.
+
+    Note:
+        Modifies decomposition argument.
+        Modifies samples argument.
+
+    Args:
+        decomposition (Decomposition): An instance of decomposition object. If a cut is performed,
+                                       decomposition is modified accordingly.
+        samples (List): A list of samples to optimize over. If a cut is performed for a sample,
+                        that sample is removed from samples.
+    """
+    while samples:
+        sample = samples.pop()
+        orig_cell, res_p1, res_p2 = stage_cut(decomposition, *sample.coords)
+
+        if not orig_cell:
+            continue
+
+        orig_cell_alt, _ = get_min_altitude(orig_cell)
+        res_p1_alt, _ = get_min_altitude(res_p1)
+        res_p2_alt, _ = get_min_altitude(res_p2)
+
+        print(res_p1_alt + res_p2_alt, orig_cell_alt)
+        if res_p2_alt + res_p1_alt < orig_cell_alt:
+            print("Improved cut from {} vs {}".format(orig_cell_alt,
+                                                                  res_p1_alt + res_p2_alt))
+            cut(decomposition, *sample.coords)
+
 
 
 # def get_first_shared_edge(v, adj):

@@ -46,6 +46,7 @@ def stage_cut(decomposition: Decomposition,
         point_2 (Tuple[float]): point_2. Must be within exterior of some cell.
 
     Returns:
+        cell (Polygon): Original cell that was modified.
         res_p1 (Polygon): Resultant polygon aligned with the cut line.
         res_p2 (Polygon): Another resultant polygon aligned against the cut line.
         Return empty polygons if invalid conditions were encountered.
