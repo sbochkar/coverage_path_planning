@@ -25,7 +25,7 @@ def is_reflex(prev_vert: Tuple[float, float],
     return dx_1 * dy_2 - dy_1 * dx_2 > 0.0
 
 
-def compute_vertex_sampler(decomposition: Decomposition) -> List[LineString]:
+def vertex_sampler(decomposition: Decomposition) -> List[LineString]:
     """
     One of the simple samplers that generates cuts that originate at a reflex vertex and end
     at some vertex of a polygon.

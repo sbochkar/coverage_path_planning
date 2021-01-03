@@ -4,7 +4,7 @@ from shapely.geometry import LineString, Polygon
 
 from decomposition.decomposition import Decomposition
 from altitudes.altitude import get_min_altitude
-from min_alt_optimizer import compute_vertex_sampler, get_cut_origins, min_alt_optimize
+from min_alt_optimizer import vertex_sampler, get_cut_origins, min_alt_optimize
 
 
 UNIT_SQUARE = [[(0., 0.), (1., 0.), (1., 1.), (0., 1.)]]
@@ -73,7 +73,7 @@ def test_vertex_sampler(test_polygon, expected_sample_space):
     """
     decomp = Decomposition(Polygon(*test_polygon))
 
-    sample_space = compute_vertex_sampler(decomp)
+    sample_space = vertex_sampler(decomp)
 
     ls_expected = [LineString(a) for a in expected_sample_space]
     for result in sample_space:
