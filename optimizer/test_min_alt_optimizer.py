@@ -80,15 +80,15 @@ def test_vertex_sampler(test_polygon, expected_sample_space):
         assert any(result.equals(a) for a in ls_expected)
 
 
-@pytest.mark.parametrize("test_polygon, test_sample_space", [
-    (TWO_REFLEX_ELONG, [((1.5, 1.), (1.5, 2.)),
-                       ]),
+@pytest.mark.parametrize("test_polygon, test_sample_space, expected_num_cuts", [
+    (TWO_REFLEX_ELONG, [((1.5, 1.), (1.5, 2.))], 1),
+    (TWO_REFLEX_ELONG, [((1.5, 1.), (1.5, 2.)), ((1., 0.), (1., 3.))], 1),
 ])
-def test_min_alt_optimize(test_polygon, test_sample_space):
+def test_min_alt_optimize(test_polygon, test_sample_space, expected_num_cuts):
     """Verify that the optimizer attempts to choose the best cut from the supplied cuts."""
     decomp = Decomposition(Polygon(*test_polygon))
     test_samples = [LineString(a) for a in test_sample_space]
 
     min_alt_optimize(decomp, test_samples)
 
-    assert False
+    assert len(decomp.cells) == expected_num_cuts + 1
