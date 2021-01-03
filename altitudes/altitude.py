@@ -63,13 +63,16 @@ def get_altitude(polygon: Polygon, theta: float) -> float:
     Returns:
         altitude (float): A scalar value of the altitude.
     """
-    # Align direction with x axis, for convenience.
+    # Align altitude direction with x axis, for convenience.
     polygon = rotate(polygon, -theta)
 
     prevs: List[Tuple[float, float]] = []
     currs: List[Tuple[float, float]] = []
     nexts: List[Tuple[float, float]] = []
+
+    # Collapse vertecies with same x-coordinate to avoid ambigious behaviours.
     for chain in [polygon.exterior, *polygon.interiors]:
+        # Forward pass
         cur, nxt = tee(chain.coords)
         next(nxt, None)
         for cur_vert, nxt_vert in zip(cur, nxt):
@@ -77,13 +80,17 @@ def get_altitude(polygon: Polygon, theta: float) -> float:
                 currs.append(cur_vert)
                 nexts.append(nxt_vert)
 
+        # Backward pass
         cur, nxt = tee(chain.coords[::-1])
         next(nxt, None)
+        prevs_: List[Tuple[float, float]] = []
         for cur_vert, nxt_vert in zip(cur, nxt):
             if cur_vert[0] != nxt_vert[0]:
-                prevs.append(nxt_vert)
-        prevs = prevs[1:] + [prevs[0]]
-        prevs = prevs[::-1]
+                prevs_.append(nxt_vert)
+
+        prevs_ = prevs_[1:] + [prevs_[0]]
+        prevs_ = prevs_[::-1]
+        prevs.extend(prevs_)
 
     event_map = list(zip(prevs, currs, nexts))
     sorted_by_x = sorted(event_map, key=lambda point: point[1][0])

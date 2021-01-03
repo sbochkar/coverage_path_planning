@@ -36,6 +36,9 @@ def plot_decomposition(fig: Any, decomposition: 'Decomposition', order_num=1):
     for cell in decomposition.cells:
         axis.plot(*cell.exterior.xy, color='#6699cc', alpha=0.7,
                   linewidth=3, solid_capstyle='round', zorder=1)
+        for hole in cell.interiors:
+            axis.plot(*hole.xy, color='#6699cc', alpha=0.7,
+                      linewidth=3, solid_capstyle='round', zorder=1)
 
     axis.set_xlim([minx - 0.5, maxx + 0.5])
     axis.set_ylim([miny - 0.5, maxy + 0.5])

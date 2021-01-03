@@ -47,7 +47,7 @@ def vertex_sampler(decomposition: Decomposition) -> List[LineString]:
 
     final_list = []
     for sample in samples:
-        common_pts = orig_poly.intersection(sample)
+        common_pts = orig_poly.exterior.intersection(sample)
 
         if not (common_pts.is_empty or
                 not common_pts.geom_type == 'MultiPoint' or # Intersection should be MultiPoint.
@@ -101,11 +101,11 @@ def min_alt_optimize(decomposition: Decomposition, samples: List[LineString]):
         if not orig_cell:
             continue
 
-        orig_cell_alt, _ = get_min_altitude(orig_cell)
+        orig_p_alt, _ = get_min_altitude(orig_cell)
         res_p1_alt, _ = get_min_altitude(res_p1)
         res_p2_alt, _ = get_min_altitude(res_p2)
 
-        if res_p2_alt + res_p1_alt < orig_cell_alt:
-            print("Improved cut from {} vs {}".format(orig_cell_alt,
+        if res_p2_alt + res_p1_alt < orig_p_alt:
+            print("Improved cut from {} vs {}".format(orig_p_alt,
                                                       res_p1_alt + res_p2_alt))
             cut(decomposition, *sample.coords)

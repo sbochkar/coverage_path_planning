@@ -51,6 +51,8 @@ def test_get_cut_origins(test_polygon, exp_origins):
                   ((2., 2.), (4., 3.)),
                   ((2., 2.), (0., 3.)),
                  ]),
+    # TODO: This test will fail with current implementation. Since not sure how to handle cuts
+    #       to a hole.
     (UNIT_SQUARE_HOLE, [((0.2, 0.2), (0., 0.)),
                         ((0.2, 0.2), (0., 1.)),
                         ((0.2, 0.2), (1., 0.)),
@@ -67,13 +69,15 @@ def test_get_cut_origins(test_polygon, exp_origins):
 ])
 def test_vertex_sampler(test_polygon, expected_sample_space):
     """
-    Unit tests for simple sampler. Simple sampler's objectie is given a polygon, propose a list
+    Unit tests for simple sampler. Simple samplers' objective is given a polygon, propose a list
     of cuts which originate from reflex verticies and end on some vertex of the polygon.
     These cuts will then be used by the optimizer to find the most optimal one.
     """
     decomp = Decomposition(Polygon(*test_polygon))
 
     sample_space = vertex_sampler(decomp)
+
+    assert len(sample_space) == len(expected_sample_space)
 
     ls_expected = [LineString(a) for a in expected_sample_space]
     for result in sample_space:
