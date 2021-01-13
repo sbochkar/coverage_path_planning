@@ -22,7 +22,7 @@ undo_cut() -> Undoes a cut in a decomposition and modifies it as needed.
 """
 import pytest
 
-from shapely.geometry import Polygon
+from shapely.geometry import LineString, Polygon
 
 from decomposition import Decomposition
 from decomposition import cut, stage_cut, stage_undo_cut, undo_cut
@@ -143,6 +143,13 @@ def test_decomposition_init_error(test_polygon):
      [[(0.05, 0.), (0.95, 0.), (0.95, 1.), (0.05, 1.)],
       [[(0.1, 0.1), (0.1, 0.9), (0.9, 0.9), (0.9, 0.1)]]],
      [[(0.95, 0.), (0.95, 1.), (1., 1.), (1., 0.)]]),
+    # Polygon with a hole and a decomposing cut touching the hole.
+    (UNIT_HOLE_SQUARE,
+     [],
+     [(0., 0.), (0.1, 0.1), (0.1, 0.9), (0.9, 0.9), (1., 1.)],
+     UNIT_HOLE_SQUARE,
+     [[(0., 0.), (0.1, 0.1), (0.1, 0.9), (0.9, 0.9), (1., 1.), (0., 1.)]],
+     [[(0., 0.), (1., 0.), (1., 1.), (0.9, 0.9), (0.9, 0.1), (0.1, 0.1)]]),
 ])
 def test_stage_cut(init_polygon, pre_test_cut, test_cut, orig_poly, res_p1, res_p2):
     """
@@ -157,9 +164,9 @@ def test_stage_cut(init_polygon, pre_test_cut, test_cut, orig_poly, res_p1, res_
     decomp = Decomposition(Polygon(*init_polygon))
 
     if pre_test_cut:
-        cut(decomp, *pre_test_cut)
+        cut(decomp, LineString(pre_test_cut))
 
-    orig_cell, poly_1, poly_2 = stage_cut(decomp, *test_cut)
+    orig_cell, poly_1, poly_2 = stage_cut(decomp, LineString(test_cut))
 
     assert poly_1.equals(Polygon(*res_p1))
     assert poly_2.equals(Polygon(*res_p2))
@@ -244,11 +251,11 @@ def test_stage_cut(init_polygon, pre_test_cut, test_cut, orig_poly, res_p1, res_
      [],
      [(0., 0.), (1., 1.)],
     ),
-    # Invalid: polygon with hole and cut touching the boundary of whole.
+    # Invalid: polygon with hole and cut crossing the hole.
     (UNIT_HOLE_SQUARE,
      [],
-     [(0.1, 0.), (0.1, 1.)],
-    ),
+     [(0., 0.), (0.1, 0.1), (0.9, 0.9), (1., 1.)],
+    )
 ])
 def test_stage_cut_invalid(init_polygon, pre_test_cut, test_cut):
     """
@@ -257,9 +264,9 @@ def test_stage_cut_invalid(init_polygon, pre_test_cut, test_cut):
     decomp = Decomposition(Polygon(*init_polygon))
 
     if pre_test_cut:
-        cut(decomp, *pre_test_cut)
+        cut(decomp, LineString(pre_test_cut))
 
-    results = stage_cut(decomp, *test_cut)
+    results = stage_cut(decomp, LineString(test_cut))
 
     assert all(poly.equals(Polygon([])) for poly in results)
     assert len(decomp.cells) == 1 + bool(pre_test_cut)
@@ -291,9 +298,9 @@ def test_cut(init_polygon, pre_test_cut, test_cut, res_p1, res_p2):
     """
     decomp = Decomposition(Polygon(*init_polygon))
     if pre_test_cut:
-        cut(decomp, *pre_test_cut)
+        cut(decomp, LineString(pre_test_cut))
 
-    poly_1, poly_2 = cut(decomp, *test_cut)
+    poly_1, poly_2 = cut(decomp, LineString(test_cut))
 
     assert poly_1.equals(Polygon(*res_p1))
     assert poly_2.equals(Polygon(*res_p2))
@@ -322,9 +329,9 @@ def test_cut_invalid(init_polygon, pre_test_cut, test_cut):
     """
     decomp = Decomposition(Polygon(*init_polygon))
     if pre_test_cut:
-        cut(decomp, *pre_test_cut)
+        cut(decomp, LineString(pre_test_cut))
 
-    results = cut(decomp, *test_cut)
+    results = cut(decomp, LineString(test_cut))
 
     assert all(poly.equals(Polygon([])) for poly in results)
     assert len(decomp.cells) == 1 + bool(pre_test_cut)
@@ -351,10 +358,10 @@ def test_cut_invalid(init_polygon, pre_test_cut, test_cut):
 def test_stage_undo_cut_invalid(invalid_cut):
     """Verifies that we cannot undo a cut on empty decomposition."""
     decomp = Decomposition(Polygon(*UNIT_SQUARE))
-    cut(decomp, (0., 0.), (1., 1.))
-    cut(decomp, (0.1, 0.1), (0.1, 0.))
+    cut(decomp, LineString([(0., 0.), (1., 1.)]))
+    cut(decomp, LineString([(0.1, 0.1), (0.1, 0.)]))
 
-    results = stage_undo_cut(decomp, *invalid_cut)
+    results = stage_undo_cut(decomp, LineString(invalid_cut))
 
     assert all(poly.equals(Polygon([])) for poly in results)
 
@@ -408,9 +415,9 @@ def test_stage_undo(init_polygon, pre_test_cuts, test_cut, new_polygon, res_p1, 
     decomp = Decomposition(Polygon(*init_polygon))
 
     for pre_test_cut in pre_test_cuts:
-        cut(decomp, *pre_test_cut)
+        cut(decomp, LineString(pre_test_cut))
 
-    new_cell, old_cell_1, old_cell_2 = stage_undo_cut(decomp, *test_cut)
+    new_cell, old_cell_1, old_cell_2 = stage_undo_cut(decomp, LineString(test_cut))
 
     assert new_cell.equals(Polygon(*new_polygon))
     assert old_cell_1.equals(Polygon(*res_p1))
@@ -441,9 +448,9 @@ def test_undo_cut(init_polygon, pre_test_cuts, test_cut, res_p):
     """
     decomp = Decomposition(Polygon(*init_polygon))
     for cut_ in pre_test_cuts:
-        cut(decomp, *cut_)
+        cut(decomp, LineString(cut_))
 
-    new_polygon = undo_cut(decomp, *test_cut)
+    new_polygon = undo_cut(decomp, LineString(test_cut))
 
     assert new_polygon.equals(Polygon(*res_p))
     assert len(decomp.cells) == 1 + len(pre_test_cuts) - 1

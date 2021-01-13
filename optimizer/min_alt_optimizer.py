@@ -96,7 +96,7 @@ def min_alt_optimize(decomposition: Decomposition, samples: List[LineString]):
     """
     while samples:
         sample = samples.pop()
-        orig_cell, res_p1, res_p2 = stage_cut(decomposition, *sample.coords)
+        orig_cell, res_p1, res_p2 = stage_cut(decomposition, sample)
 
         if not orig_cell:
             continue
@@ -108,4 +108,4 @@ def min_alt_optimize(decomposition: Decomposition, samples: List[LineString]):
         if res_p2_alt + res_p1_alt < orig_p_alt:
             print("Improved cut from {} vs {}".format(orig_p_alt,
                                                       res_p1_alt + res_p2_alt))
-            cut(decomposition, *sample.coords)
+            cut(decomposition, sample)

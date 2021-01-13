@@ -29,7 +29,7 @@ class Decomposition:  # pylint: disable=too-few-public-methods # Container class
 
 
 def stage_cut(decomposition: Decomposition,
-              point_1: Tuple[float], point_2: Tuple[float]) -> Tuple[Polygon, Polygon, Polygon]:
+              split_line: LineString) -> Tuple[Polygon, Polygon, Polygon]:
     """Stage a cut on a decomposition. Does not modify the decomposition.
 
     Split a polygon into two other polygons along split_line via the following steps:
@@ -40,10 +40,12 @@ def stage_cut(decomposition: Decomposition,
 
     Returns empty polygons if an error condition is encountered.
 
+    Note:
+        * A split line must be entirely in a cell.
+
     Args:
         decomposition (Decomposition): An instance of decomposition.
-        point_1 (Tuple[float]): point_1. Must be within exterior of some cell.
-        point_2 (Tuple[float]): point_2. Must be within exterior of some cell.
+        split_line (LineString): A line representing a cut.
 
     Returns:
         cell (Polygon): Original cell that was modified.
@@ -51,19 +53,17 @@ def stage_cut(decomposition: Decomposition,
         res_p2 (Polygon): Another resultant polygon aligned against the cut line.
         Return empty polygons if invalid conditions were encountered.
     """
-    split_line = LineString([point_1, point_2])
+    is_within = [split_line.within(cell) for cell in decomposition.cells]
+    if sum(is_within) != 1:
+        return Polygon([]), Polygon([]), Polygon([])
 
-    for cell in decomposition.cells:
-        # Intersection of cell boundary with the proposed split line.
-        common_pts = cell.exterior.intersection(split_line)
+    cell = decomposition.cells[is_within.index(True)]
+    common_pts = cell.exterior.intersection(split_line)
 
-        if not (common_pts.is_empty or
-                not common_pts.geom_type == 'MultiPoint' or # Intersection should be MultiPoint.
-                len(common_pts) != 2 or # MultiPoint must ONLY have 2 points.
-                not split_line.within(cell) or # Split line should be inside cell.
-                any(split_line.intersects(hole) for hole in cell.interiors)): # Cut touching holes?
-            break
-    else:
+    if (common_pts.is_empty or  # Intersection should not be empty.
+            not common_pts.geom_type == 'MultiPoint' or  # Intersection should be MultiPoint.
+            len(common_pts) != 2 or  # MultiPoint must ONLY have 2 points.
+            any(split_line.crosses(hole) for hole in cell.interiors)):  # Cut crosses any holes?
         return Polygon([]), Polygon([]), Polygon([])
 
     split_result = split(cell, split_line)
@@ -84,23 +84,21 @@ def stage_cut(decomposition: Decomposition,
     return cell, res_p1_pol, res_p2_pol
 
 
-def cut(decomposition: Decomposition,
-        point_1: Tuple[float], point_2: Tuple[float]) -> Tuple[Polygon, Polygon]:
+def cut(decomposition: Decomposition, split_line: LineString) -> Tuple[Polygon, Polygon]:
     """Perofrms a cut on a decomposition. Modifies the decomposition.
 
     Split a polygon into two other polygons along split_line.
 
     Args:
         decomposition (Decomposition): An instance of decomposition.
-        point_1 (Tuple[float]): point_1
-        point_2 (Tuple[float]): point_2
+        split_line (LineString): A line representing a cut.
 
     Returns:
         res_p1 (Polygon): Resultant polygon aligned with the cut line.
         res_p2 (Polygon): Another resultant polygon aligned against the cut line.
         Return empty polygons if invalid conditions were encountered.
     """
-    orig_cell, res_p1, res_p2 = stage_cut(decomposition, point_1, point_2)
+    orig_cell, res_p1, res_p2 = stage_cut(decomposition, split_line)
 
     if res_p1.is_empty or res_p2.is_empty:
         return res_p1, res_p2
@@ -114,16 +112,14 @@ def cut(decomposition: Decomposition,
 
 
 def stage_undo_cut(decomposition: Decomposition,
-                   point_1: Tuple[float],
-                   point_2: Tuple[float]) -> Tuple[Polygon, Polygon, Polygon]:
+                   split_line: LineString) -> Tuple[Polygon, Polygon, Polygon]:
     """Undoes a cut in a decomposition. Does not modify the decomposition.
 
     Performs union of the two adjacent cells that share the split line. Given it's valid.
 
     Args:
         decomposition (Decomposition): An instance of decomposition.
-        point_1 (Tuple[float]): point_1
-        point_2 (Tuple[float]): point_2
+        split_line (LineString): A line representing a cut.
 
     Returns:
         union (Polygon): Resultant polygon from the union.
@@ -131,8 +127,6 @@ def stage_undo_cut(decomposition: Decomposition,
         res_p2 (Polygon): Original polygon adjacent to the split line. Not aligned with the cut.
         Return empty polygons if invalid conditions were encountered.
     """
-    split_line = LineString([point_1, point_2])
-
     def is_compat_with_cell(cell):
         """Perform validity checks of the given cell w.r.t the split_line."""
         intersection = cell.exterior.intersection(split_line)
@@ -166,22 +160,20 @@ def stage_undo_cut(decomposition: Decomposition,
     return union, res_p1, res_p2
 
 
-def undo_cut(decomposition: Decomposition, point_1: Tuple[float],
-             point_2: Tuple[float]) -> Polygon:
+def undo_cut(decomposition: Decomposition, split_line: LineString) -> Polygon:
     """Undoes a cut in a decomposition. Modifies the decomposition.
 
     Performs union of the two adjacent cells that share the split line. Given it's valid.
 
     Args:
         decomposition (Decomposition): An instance of decomposition.
-        point_1 (Tuple[float]): point_1
-        point_2 (Tuple[float]): point_2
+        split_line (LineString): A line representing a cut.
 
     Returns:
         union (Polygon): Resultant polygon from the union.
         Return empty polygons if invalid conditions were encountered.
     """
-    new_cell, res_p1, res_p2 = stage_undo_cut(decomposition, point_1, point_2)
+    new_cell, res_p1, res_p2 = stage_undo_cut(decomposition, split_line)
 
     if new_cell.is_empty:
         return new_cell
